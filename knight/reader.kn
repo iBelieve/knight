@@ -1,0 +1,169 @@
+; -*- mode: Clojure -*-
+
+(defn make-string-reader [string]
+  (js/obj "input" string
+          "index" 0))
+
+(def reader-macros (hash-map))
+
+(defn read-char [reader]
+  (let [char (js/index (.-input reader) (.-index reader))]
+    (set! (.-index reader) (+ (.-index reader) 1))
+    char))
+
+(defn peek-char [reader]
+  (js/index (.-input reader) (.-index reader)))
+
+(defn has-more? [reader]
+  (< (.-index reader) (.-length (.-input reader))))
+
+(defn char-whitespace? [char]
+  (or (= char #\space)
+      (= char #\tab)
+      (= char #\newline)
+      (= char #\,)))
+
+(defn char-digit? [char]
+  (and (>= char #\0)
+       (<= char #\9)))
+
+(defn char-macro? [char]
+  (contains-key? reader-macros char))
+
+(defn take-until [reader predicate]
+  (let [start-index (.-index reader)
+        input-length (.-length (.-input reader))]
+    (loop [index (.-index reader)]
+      (if (or (>= index input-length)
+              (predicate (js/index (.-input reader) index)))
+        (do
+          (set! (.-index reader) index)
+          (.substring (.-input reader) start-index index))
+        (recur (+ index 1))))))
+
+(defn take-while [reader predicate]
+  (take-until reader (fn [char] (not (predicate char)))))
+
+(defn skip-whitespace [reader]
+  (loop []
+    (take-while reader (fn [char] (char-whitespace? char)))
+    (if (= (peek-char reader) #\;)
+      (do
+        (take-until reader (fn [c] (= c #\newline)))
+        (recur)))))
+
+(defn read-token [reader]
+  (concat (read-char reader)
+          (take-until reader (fn (c) (or (char-whitespace? c) (char-macro? c))))))
+
+(defn parse-token [token]
+  (cond
+    [(= token "nil") nil]
+    [(= token "true") true]
+    [(= token "false") false]
+    [else (string->symbol token)]))
+
+(defn read-number [reader]
+  (let [string (read-token reader)]
+    (if (string-contains? string ".")
+      (js/parseFloat string)
+      (js/parseInt string))))
+
+(defn read-character [reader]
+  (let [char (read-token reader)]
+    (cond
+      [(= char "newline") #\newline]
+      [(= char "return") #\return]
+      [(= char "tab") #\tab]
+      [(= char "space") #\space]
+      [(= (.-length char) 1) char]
+      [else (error (+ "Unrecognized char: '" char "'"))])))
+
+(defn read-keyword [reader]
+  (string->keyword (read-token reader)))
+
+(defn read-quote [reader]
+  (list 'quote (read reader)))
+
+(defn read-list [reader first-char]
+  (read-until reader #\)))
+
+(defn read-array [reader first-char]
+  (read-until reader #\]))
+
+(defn read-unmatched-delimiter [reader first-char]
+  (error (concat "Unmatched delimiter: " first-char)))
+
+(defn read-string [reader first-char]
+  (loop [string ""]
+    (let [part (take-until reader (fn [ch] (or (= ch #\")
+                                               (= ch #\\))))
+          string2 (concat string part)
+          char (read-char reader)]
+      (cond
+        [(nil? char) (error "Unexpected EOF while reading string")]
+        [(= char #\") string2]
+        [(= char #\\)
+         (let [char (read-char reader)
+               escaped-char (cond
+                              [(nil? char) (error "Unexpected EOF while reading character escape")]
+                              [(= char #\") char]
+                              [(= char #\\) char]
+                              [(= char #\/) char]
+                              [(= char #\n) #\newline]
+                              [(= char #\t) #\tab]
+                              [(= char #\r) #\return]
+                              [else (concat (error "Unrecognized character escape" char))])]
+           (recur (concat string2 escaped-char)))]))))
+
+(defn read-special [reader]
+  (let [c (read-char reader)]
+    (cond
+      [(= c #\:) (read-keyword reader)]
+      [(= c #\\) (read-character reader)]
+      [else (error (concat "Unrecognized special #" c))])))
+
+(hash-map-set! reader-macros #\' read-quote)
+(hash-map-set! reader-macros #\: read-keyword)
+; (hash-map-set! reader-macros #\\ read-character)
+(hash-map-set! reader-macros #\" read-string)
+(hash-map-set! reader-macros #\# read-special)
+(hash-map-set! reader-macros #\( read-list)
+(hash-map-set! reader-macros #\) read-unmatched-delimiter)
+(hash-map-set! reader-macros #\[ read-array)
+(hash-map-set! reader-macros #\] read-unmatched-delimiter)
+
+(defn read-until [reader end-char]
+  (loop [results (list)]
+    (skip-whitespace reader)
+    (let [char (peek-char reader)]
+      (cond
+        [(nil? char) "UNEXPECTED EOF"]
+        [(= char end-char)
+         (read-char reader)
+         results]
+        [else (recur (append results (read reader)))]))))
+
+(defn read [reader]
+  (skip-whitespace reader)
+  (let [c (peek-char reader)]
+    (cond
+      [(char-digit? c) (read-number reader)]
+      [(char-macro? c)
+       (let [macro (hash-map-get reader-macros c)]
+         (read-char reader)
+         (macro reader c))]
+      [else (parse-token (read-token reader))])))
+
+(defn read-many [reader]
+  (loop [results (list)]
+    (skip-whitespace reader)
+    (if (has-more? reader)
+      (recur (append results (read reader)))
+      results)))
+
+(defn string->expr [str]
+  (read (make-string-reader str)))
+
+(defn string->exprs [str]
+  (read-many (make-string-reader str)))

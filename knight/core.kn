@@ -1,0 +1,191 @@
+; -*- mode: Clojure -*-
+
+(defn Symbol [name]
+  (set! (.-name js/this) name)
+  (js/return))
+
+(defn Keyword [name]
+  (set! (.-name js/this) name)
+  (js/return))
+
+(defn true? [value]
+  (js/=== value true))
+
+(defn false? [value]
+  (js/=== value false))
+
+(defn truthy? [value]
+  "A value is considered truthy if it is not false and not nil (i.e., not falsy)"
+  (js/and (js/!== value false) (js/!= value nil)))
+
+(defn falsy? [value]
+  "A value is considered falsy if it is false or nil"
+  (js/or (js/=== value false) (js/== value nil)))
+
+(defn not [value]
+  (js/or (js/=== value false) (js/== value nil)))
+
+(defn nil? [value]
+  (js/== value nil))
+
+(defn not-nil? [value]
+  (js/!= value nil))
+
+(defn symbol? [value]
+  (js/instanceof value Symbol))
+
+(defn keyword? [value]
+  (js/instanceof value Keyword))
+
+(defn bool? [value]
+  (js/=== (js/typeof value) "boolean"))
+
+(defn number? [value]
+  (js/=== (js/typeof value) "number"))
+
+(defn char? [value]
+  (js/and (js/=== (js/typeof value) "string")
+          (js/=== (.-length value) 1)))
+
+(defn string? [value]
+  (js/=== (js/typeof value) "string"))
+
+(defn list? [value]
+  (.isArray js/Array value))
+
+(defn empty? [value]
+  (js/=== (.-length value) 0))
+
+(defn single? [list]
+  (and (list? list)
+       (= (.-length list) 1)))
+
+(defn not-empty? [value]
+  (> (.-length value) 0))
+
+(defn list [(spread items)]
+  (js/array (spread items)))
+
+(defn map [array func]
+  (.map array func))
+
+(defn append [list (spread items)]
+  (js/array (spread list) (spread items)))
+
+(defn concat [a b]
+  (+ a b))
+
+(defn string-contains? [string substring]
+  (.includes string substring))
+
+(defn string-prefix? [string prefix]
+  (.startsWith string prefix))
+
+(defn string-join [string sep]
+  (.join string sep))
+
+; (defn parse-float [string]
+;   (js/parseFloat string))
+
+; (defn parse-int [string]
+;   (js/parseInt string))
+
+(defn println [(spread args)]
+  (.log js/console (spread args)))
+
+(defn print [(spread args)]
+  (for [arg args]
+    (.write (.-stdout js/process) arg)))
+
+(defn hash-map []
+  (js/new js/Map))
+
+(defn hash-map-get [map key]
+  (.get map key))
+
+(defn hash-map-set! [map key value]
+  (.set map key value))
+
+(defn hash-map-copy [map]
+  (js/new js/Map map))
+
+(defn array-copy [array]
+  (.from js/Array array))
+
+(defn contains-key? [map key]
+  (.has map key))
+
+(def interned-symbols (hash-map))
+(def interned-keywords (hash-map))
+
+(defn string->symbol [string]
+  (if (not (contains-key? interned-symbols string))
+    (hash-map-set! interned-symbols string (js/new Symbol string)))
+  (hash-map-get interned-symbols string))
+
+(defn symbol->string [symbol]
+  (.-name symbol))
+
+(defn keyword->string [keyword]
+  (.-name keyword))
+
+(defn string->keyword [string]
+  (let [substring (if (string-prefix? string ":") (.substring string 1) string)]
+    (if (not (contains-key? interned-keywords substring))
+      (hash-map-set! interned-keywords substring (js/new Keyword substring)))
+    (hash-map-get interned-keywords substring)))
+
+(defn first [list]
+  (js/index list 0))
+
+(defn second [list]
+  (js/index list 1))
+
+(defn third [list]
+  (js/index list 2))
+
+(defn fourth [list]
+  (js/index list 3))
+
+(defn skip1 [list]
+  (.slice list 1))
+
+(defn skip2 [list]
+  (.slice list 2))
+
+(defn split-last [seq]
+  (js/array (.slice seq 0 (- (.-length seq) 1))
+            (js/index seq (- (.-length seq) 1))))
+
+(defn regex [str flags]
+  (js/new js/RegExp str flags))
+
+(defn error [msg]
+  (js/throw (js/new js/Error msg)))
+
+(defn tagged-list? [value tag]
+  (and (list? value)
+       (= (first value) tag)))
+
+(defn repr [value]
+  (cond
+    [(nil? value) "nil"]
+    [else (.stringify js/JSON value)]))
+
+(defgen grouped [seq count]
+  (loop [i 0]
+    (if (< i (.-length seq))
+      (do
+        (yield (.slice seq i (+ i count)))
+        (recur (+ i count))))))
+
+(defn zip [(spread arrays)]
+  (map (first arrays)
+       (fn [_ index]
+         (map arrays (fn [array] (js/index array index))))))
+
+(defn set [(spread values)]
+  (js/new js/Set values))
+
+(defn set-contains? [set value]
+  (.has set value))

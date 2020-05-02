@@ -1,0 +1,7 @@
+; -*- mode: Clojure -*-
+
+(def fs (js/require "fs"))
+
+(let [text (.readFileSync fs 0 "utf-8")]
+  (println "#! /usr/bin/env node")
+  (emit-module (string->exprs text)))
