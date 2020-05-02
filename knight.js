@@ -73,6 +73,7 @@ function readKeyword(reader){return stringToKeyword(readToken(reader));}
 function readQuote(reader){return list(stringToSymbol("quote"),read(reader));}
 function readList(reader,firstChar){return readUntil(reader,")");}
 function readArray(reader,firstChar){return readUntil(reader,"]");}
+function readStruct(reader,firstChar){return list(stringToSymbol("js/obj"),...readUntil(reader,"}"));}
 function readUnmatchedDelimiter(reader,firstChar){return error(concat("Unmatched delimiter: ",firstChar));}
 function readString(reader,firstChar){let string="";while(true){let part=takeUntil(reader,(ch)=>{return isTruthy((ch)===("\""))||((ch)===("\\"));});let string2=concat(string,part);let char=readChar(reader);if(isNil(char)){return error("Unexpected EOF while reading string");}else if((char)===("\"")){return string2;}else if((char)===("\\")){let char=readChar(reader);let escapedChar=(()=>{if(isNil(char)){return error("Unexpected EOF while reading character escape");}else if((char)===("\"")){return char;}else if((char)===("\\")){return char;}else if((char)===("/")){return char;}else if((char)===("n")){return "\n";}else if((char)===("t")){return "\t";}else if((char)===("r")){return "\r";}else {return concat(error("Unrecognized character escape",char));}})();string=concat(string2,escapedChar);continue;}}}
 function readSpecial(reader){let c=readChar(reader);if((c)===(":")){return readKeyword(reader);}else if((c)===("\\")){return readCharacter(reader);}else {return error(concat("Unrecognized special #",c));}}
@@ -84,6 +85,8 @@ hashMapSet(readerMacros,"(",readList);
 hashMapSet(readerMacros,")",readUnmatchedDelimiter);
 hashMapSet(readerMacros,"[",readArray);
 hashMapSet(readerMacros,"]",readUnmatchedDelimiter);
+hashMapSet(readerMacros,"{",readStruct);
+hashMapSet(readerMacros,"}",readUnmatchedDelimiter);
 function readUntil(reader,endChar){let results=list();while(true){skipWhitespace(reader);let char=peekChar(reader);if(isNil(char)){return "UNEXPECTED EOF";}else if((char)===(endChar)){readChar(reader);return results;}else {results=append(results,read(reader));continue;}}}
 function read(reader){skipWhitespace(reader);let c=peekChar(reader);if(isCharDigit(c)){return readNumber(reader);}else if(isCharMacro(c)){let macro=hashMapGet(readerMacros,c);readChar(reader);return macro(reader,c);}else {return parseToken(readToken(reader));}}
 function readMany(reader){let results=list();while(true){skipWhitespace(reader);if(isTruthy(hasMore(reader))){results=append(results,read(reader));continue;}else{return results;}}}
@@ -184,7 +187,7 @@ function emitIndex(env,ctx,args){let obj=first(args);let index=second(args);prin
 hashMapSet(analyzeSpecials,stringToSymbol("js/index"),emitIndex);
 function emitThrow(env,ctx,args){if(isTruthy((ctx)===(stringToKeyword("expr")))){error("throw cannot be used as an expression");}print("throw ");emit(env,stringToKeyword("expr"),first(args));return print(";");}
 hashMapSet(analyzeSpecials,stringToSymbol("js/throw"),emitThrow);
-function emitObj(env,ctx,args){printReturn(ctx);print("{");for(let [key,value]of grouped(args,2)){print(JSON.stringify(key),":");emit(env,stringToKeyword("expr"),value);print(",");}print("}");return printEnd("}");}
+function emitObj(env,ctx,args){printReturn(ctx);print("{");for(let [key,value]of grouped(args,2)){if(isTruthy(isKeyword(key))){print(JSON.stringify(kebabcaseToCamelcase(keywordToString(key))),":");}else{print(JSON.stringify(key),":");}emit(env,stringToKeyword("expr"),value);print(",");}print("}");return printEnd("}");}
 hashMapSet(analyzeSpecials,stringToSymbol("js/obj"),emitObj);
 let fs=require("fs");
 let text=fs.readFileSync(0,"utf-8");println("#! /usr/bin/env node");emitModule(stringToExprs(text));

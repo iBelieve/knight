@@ -91,6 +91,9 @@
 (defn read-array [reader first-char]
   (read-until reader #\]))
 
+(defn read-struct [reader first-char]
+  (list 'js/obj (spread (read-until reader #\}))))
+
 (defn read-unmatched-delimiter [reader first-char]
   (error (concat "Unmatched delimiter: " first-char)))
 
@@ -132,6 +135,8 @@
 (hash-map-set! reader-macros #\) read-unmatched-delimiter)
 (hash-map-set! reader-macros #\[ read-array)
 (hash-map-set! reader-macros #\] read-unmatched-delimiter)
+(hash-map-set! reader-macros #\{ read-struct)
+(hash-map-set! reader-macros #\} read-unmatched-delimiter)
 
 (defn read-until [reader end-char]
   (loop [results (list)]

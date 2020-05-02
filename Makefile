@@ -17,6 +17,3 @@ knight.js: $(SRC)
 bootstrap: knight.scm $(SRC)
 	cat $(SRC) | csi -keyword-style prefix -s knight.scm > knight.js
 	chmod +x knight.js
-
-knight: knight.scm
-	csc -keyword-style prefix $<
