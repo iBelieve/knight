@@ -81,6 +81,9 @@
 (defn string-prefix? [string prefix]
   (.startsWith string prefix))
 
+(defn string-suffix? [string prefix]
+  (.endsWith string prefix))
+
 (defn string-join [string sep]
   (.join string sep))
 
@@ -130,7 +133,11 @@
   (.-name keyword))
 
 (defn string->keyword [string]
-  (let [substring (if (string-prefix? string ":") (.substring string 1) string)]
+  (let [substring (if (string-prefix? string ":")
+                    (.substring string 1)
+                    (if (string-suffix? string ":")
+                      (.substring string 0 (- (.-length string) 1))
+                      string))]
     (if (not (contains-key? interned-keywords substring))
       (hash-map-set! interned-keywords substring (js/new Keyword substring)))
     (hash-map-get interned-keywords substring)))

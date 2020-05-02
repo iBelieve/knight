@@ -17,17 +17,17 @@
        (contains-key? analyze-specials form)))
 
 (defn make-env []
-  {:variables (hash-map)
-   :recur-variables nil})
+  {variables: (hash-map)
+   recur-variables: nil})
 
 (defn child-env [env]
-  {:variables (hash-map-copy (.-variables env))
-   :recur-variables (if (not-nil? (.-recurVariables env))
+  {variables: (hash-map-copy (.-variables env))
+   recur-variables: (if (not-nil? (.-recurVariables env))
                       (array-copy (.-recurVariables env)))})
 
 (defn recur-env [env]
-  {:variables (hash-map-copy (.-variables env))
-   :recur-variables (js/array)})
+  {variables: (hash-map-copy (.-variables env))
+   recur-variables: (js/array)})
 
 (defn append-recur-var [env var]
   (.push (.-recurVariables env) var))
@@ -49,12 +49,12 @@
     :return))
 
 (defn print-return [ctx]
-  (if (= ctx #:return)
+  (if (= ctx :return)
     (print "return ")))
 
 (defn print-end [ctx]
-  (if (or (= ctx #:return)
-          (= ctx #:statement))
+  (if (or (= ctx :return)
+          (= ctx :statement))
     (print ";")))
 
 (defn js-keyword? [ident]

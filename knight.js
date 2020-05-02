@@ -24,6 +24,7 @@ function append(list,...items){return [...list,...items];}
 function concat(a,b){return (a)+(b);}
 function isStringContains(string,substring){return string.includes(substring);}
 function isStringPrefix(string,prefix){return string.startsWith(prefix);}
+function isStringSuffix(string,prefix){return string.endsWith(prefix);}
 function stringJoin(string,sep){return string.join(sep);}
 function println(...args){return console.log(...args);}
 function print(...args){for(let arg of args){process.stdout.write(arg);}}
@@ -38,7 +39,7 @@ let internedKeywords=hashMap();
 function stringToSymbol(string){if(isTruthy(not(containsKey(internedSymbols,string)))){hashMapSet(internedSymbols,string,new LispSymbol(string));}return hashMapGet(internedSymbols,string);}
 function symbolToString(symbol){return symbol.name;}
 function keywordToString(keyword){return keyword.name;}
-function stringToKeyword(string){let substring=isStringPrefix(string,":")?string.substring(1):string;if(isTruthy(not(containsKey(internedKeywords,substring)))){hashMapSet(internedKeywords,substring,new Keyword(substring));}return hashMapGet(internedKeywords,substring);}
+function stringToKeyword(string){let substring=isStringPrefix(string,":")?string.substring(1):isStringSuffix(string,":")?string.substring(0,(string.length)-(1)):string;if(isTruthy(not(containsKey(internedKeywords,substring)))){hashMapSet(internedKeywords,substring,new Keyword(substring));}return hashMapGet(internedKeywords,substring);}
 function first(list){return list[0];}
 function second(list){return list[1];}
 function third(list){return list[2];}
@@ -66,21 +67,18 @@ function takeUntil(reader,predicate){let startIndex=reader.index;let inputLength
 function takeWhile(reader,predicate){return takeUntil(reader,(char)=>{return not(predicate(char));});}
 function skipWhitespace(reader){while(true){takeWhile(reader,(char)=>{return isCharWhitespace(char);});if(isTruthy((peekChar(reader))===(";"))){{takeUntil(reader,(c)=>{return (c)===("\n");});continue;}}else{return;}}}
 function readToken(reader){return concat(readChar(reader),takeUntil(reader,(c)=>{return isTruthy(isCharWhitespace(c))||(isCharMacro(c));}));}
-function parseToken(token){if((token)===("nil")){return null;}else if((token)===("true")){return true;}else if((token)===("false")){return false;}else {return stringToSymbol(token);}}
+function parseToken(token){if((token)===("nil")){return null;}else if((token)===("true")){return true;}else if((token)===("false")){return false;}else if(isTruthy(isStringPrefix(token,":"))||(isStringSuffix(token,":"))){return stringToKeyword(token);}else {return stringToSymbol(token);}}
 function readNumber(reader){let string=readToken(reader);if(isTruthy(isStringContains(string,"."))){return parseFloat(string);}else{return parseInt(string);}}
 function readCharacter(reader){let char=readToken(reader);if((char)===("newline")){return "\n";}else if((char)===("return")){return "\r";}else if((char)===("tab")){return "\t";}else if((char)===("space")){return " ";}else if((char.length)===(1)){return char;}else {return error(("Unrecognized char: '")+(char)+("'"));}}
-function readKeyword(reader){return stringToKeyword(readToken(reader));}
 function readQuote(reader){return list(stringToSymbol("quote"),read(reader));}
 function readList(reader,firstChar){return readUntil(reader,")");}
 function readArray(reader,firstChar){return readUntil(reader,"]");}
 function readStruct(reader,firstChar){return list(stringToSymbol("js/obj"),...readUntil(reader,"}"));}
 function readUnmatchedDelimiter(reader,firstChar){return error(concat("Unmatched delimiter: ",firstChar));}
 function readString(reader,firstChar){let string="";while(true){let part=takeUntil(reader,(ch)=>{return isTruthy((ch)===("\""))||((ch)===("\\"));});let string2=concat(string,part);let char=readChar(reader);if(isNil(char)){return error("Unexpected EOF while reading string");}else if((char)===("\"")){return string2;}else if((char)===("\\")){let char=readChar(reader);let escapedChar=(()=>{if(isNil(char)){return error("Unexpected EOF while reading character escape");}else if((char)===("\"")){return char;}else if((char)===("\\")){return char;}else if((char)===("/")){return char;}else if((char)===("n")){return "\n";}else if((char)===("t")){return "\t";}else if((char)===("r")){return "\r";}else {return concat(error("Unrecognized character escape",char));}})();string=concat(string2,escapedChar);continue;}}}
-function readSpecial(reader){let c=readChar(reader);if((c)===(":")){return readKeyword(reader);}else if((c)===("\\")){return readCharacter(reader);}else {return error(concat("Unrecognized special #",c));}}
 hashMapSet(readerMacros,"'",readQuote);
-hashMapSet(readerMacros,":",readKeyword);
+hashMapSet(readerMacros,"\\",readCharacter);
 hashMapSet(readerMacros,"\"",readString);
-hashMapSet(readerMacros,"#",readSpecial);
 hashMapSet(readerMacros,"(",readList);
 hashMapSet(readerMacros,")",readUnmatchedDelimiter);
 hashMapSet(readerMacros,"[",readArray);

@@ -18,14 +18,14 @@
   (< (.-index reader) (.-length (.-input reader))))
 
 (defn char-whitespace? [char]
-  (or (= char #\space)
-      (= char #\tab)
-      (= char #\newline)
-      (= char #\,)))
+  (or (= char \space)
+      (= char \tab)
+      (= char \newline)
+      (= char \,)))
 
 (defn char-digit? [char]
-  (and (>= char #\0)
-       (<= char #\9)))
+  (and (>= char \0)
+       (<= char \9)))
 
 (defn char-macro? [char]
   (contains-key? reader-macros char))
@@ -47,9 +47,9 @@
 (defn skip-whitespace [reader]
   (loop []
     (take-while reader (fn [char] (char-whitespace? char)))
-    (if (= (peek-char reader) #\;)
+    (if (= (peek-char reader) \;)
       (do
-        (take-until reader (fn [c] (= c #\newline)))
+        (take-until reader (fn [c] (= c \newline)))
         (recur)))))
 
 (defn read-token [reader]
@@ -61,6 +61,8 @@
     [(= token "nil") nil]
     [(= token "true") true]
     [(= token "false") false]
+    [(or (string-prefix? token ":")
+         (string-suffix? token ":")) (string->keyword token)]
     [else (string->symbol token)]))
 
 (defn read-number [reader]
@@ -72,71 +74,59 @@
 (defn read-character [reader]
   (let [char (read-token reader)]
     (cond
-      [(= char "newline") #\newline]
-      [(= char "return") #\return]
-      [(= char "tab") #\tab]
-      [(= char "space") #\space]
+      [(= char "newline") \newline]
+      [(= char "return") \return]
+      [(= char "tab") \tab]
+      [(= char "space") \space]
       [(= (.-length char) 1) char]
       [else (error (+ "Unrecognized char: '" char "'"))])))
-
-(defn read-keyword [reader]
-  (string->keyword (read-token reader)))
 
 (defn read-quote [reader]
   (list 'quote (read reader)))
 
 (defn read-list [reader first-char]
-  (read-until reader #\)))
+  (read-until reader \)))
 
 (defn read-array [reader first-char]
-  (read-until reader #\]))
+  (read-until reader \]))
 
 (defn read-struct [reader first-char]
-  (list 'js/obj (spread (read-until reader #\}))))
+  (list 'js/obj (spread (read-until reader \}))))
 
 (defn read-unmatched-delimiter [reader first-char]
   (error (concat "Unmatched delimiter: " first-char)))
 
 (defn read-string [reader first-char]
   (loop [string ""]
-    (let [part (take-until reader (fn [ch] (or (= ch #\")
-                                               (= ch #\\))))
+    (let [part (take-until reader (fn [ch] (or (= ch \")
+                                               (= ch \\))))
           string2 (concat string part)
           char (read-char reader)]
       (cond
         [(nil? char) (error "Unexpected EOF while reading string")]
-        [(= char #\") string2]
-        [(= char #\\)
+        [(= char \") string2]
+        [(= char \\)
          (let [char (read-char reader)
                escaped-char (cond
                               [(nil? char) (error "Unexpected EOF while reading character escape")]
-                              [(= char #\") char]
-                              [(= char #\\) char]
-                              [(= char #\/) char]
-                              [(= char #\n) #\newline]
-                              [(= char #\t) #\tab]
-                              [(= char #\r) #\return]
+                              [(= char \") char]
+                              [(= char \\) char]
+                              [(= char \/) char]
+                              [(= char \n) \newline]
+                              [(= char \t) \tab]
+                              [(= char \r) \return]
                               [else (concat (error "Unrecognized character escape" char))])]
            (recur (concat string2 escaped-char)))]))))
 
-(defn read-special [reader]
-  (let [c (read-char reader)]
-    (cond
-      [(= c #\:) (read-keyword reader)]
-      [(= c #\\) (read-character reader)]
-      [else (error (concat "Unrecognized special #" c))])))
-
-(hash-map-set! reader-macros #\' read-quote)
-(hash-map-set! reader-macros #\: read-keyword)
-; (hash-map-set! reader-macros #\\ read-character)
-(hash-map-set! reader-macros #\" read-string)
-(hash-map-set! reader-macros #\# read-special)
-(hash-map-set! reader-macros #\( read-list)
-(hash-map-set! reader-macros #\) read-unmatched-delimiter)
-(hash-map-set! reader-macros #\[ read-array)
-(hash-map-set! reader-macros #\] read-unmatched-delimiter)
-(hash-map-set! reader-macros #\{ read-struct)
-(hash-map-set! reader-macros #\} read-unmatched-delimiter)
+(hash-map-set! reader-macros \' read-quote)
+(hash-map-set! reader-macros \\ read-character)
+(hash-map-set! reader-macros \" read-string)
+(hash-map-set! reader-macros \( read-list)
+(hash-map-set! reader-macros \) read-unmatched-delimiter)
+(hash-map-set! reader-macros \[ read-array)
+(hash-map-set! reader-macros \] read-unmatched-delimiter)
+(hash-map-set! reader-macros \{ read-struct)
+(hash-map-set! reader-macros \} read-unmatched-delimiter)
 
 (defn read-until [reader end-char]
   (loop [results (list)]
