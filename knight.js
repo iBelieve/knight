@@ -10,16 +10,17 @@ function isNil(value){return (value)==(null);}
 function isNotNil(value){return (value)!=(null);}
 function isSymbol(value){return (value)instanceof(LispSymbol);}
 function isKeyword(value){return (value)instanceof(Keyword);}
-function isBool(value){return (typeof(value))===("boolean");}
-function isNumber(value){return (typeof(value))===("number");}
-function isChar(value){return ((typeof(value))===("string"))&&((value.length)===(1));}
-function isString(value){return (typeof(value))===("string");}
+function isBool(value){return ((typeof(value))===("boolean"))||((value)instanceof(Boolean));}
+function isNumber(value){return ((typeof(value))===("number"))||((value)instanceof(Number));}
+function isChar(value){return (((typeof(value))===("string"))||((value)instanceof(String)))&&((value.length)===(1));}
+function isString(value){return ((typeof(value))===("string"))||((value)instanceof(String));}
 function isList(value){return Array.isArray(value);}
 function isEmpty(value){return (value.length)===(0);}
 function isSingle(list){return isTruthy(isList(list))&&((list.length)===(1));}
-function isNotEmpty(value){return (value.length)>(0);}
+function isNotEmpty(value){return isTruthy(isNotNil(value))&&((value.length)>(0));}
 function list(...items){return [...items];}
 function map(array,func){return array.map(func);}
+function mapLast(array,func,lastFunc){return array.map((item,index)=>{if(isTruthy((index)===((array.length)-(1)))){return lastFunc(item);}else{if(isTruthy(isNil(func))){return item;}else{return func(item);}}});}
 function append(list,...items){return [...list,...items];}
 function concat(a,b){return (a)+(b);}
 function isStringContains(string,substring){return string.includes(substring);}
@@ -55,6 +56,12 @@ function* grouped(seq,count){let i=0;while(true){if(isTruthy((i)<(seq.length))){
 function zip(...arrays){return map(first(arrays),(_,index)=>{return map(arrays,(array)=>{return array[index];});});}
 function set(...values){return new Set(values);}
 function isSetContains(set,value){return set.has(value);}
+function box(value){if(isBool(value)){return new Boolean(value);}else if(isNumber(value)){return new Number(value);}else if(isString(value)){return new String(value);}else {return value;}}
+function unbox(value){if(isTruthy(isNotNil(value))){return value.valueOf();}else{return null;}}
+let symbolMeta=Symbol("meta");
+function meta(value){return value[symbolMeta];}
+function metaSet(value,meta){value[symbolMeta]=meta;return;}
+function stringRepeat(str,count){return str.repeat(count);}
 function makeStringReader(string){return {"input":string,"index":0,}}
 let readerMacros=hashMap();
 function readChar(reader){let char=reader.input[reader.index];reader.index=(reader.index)+(1);return char;}
@@ -73,9 +80,10 @@ function readCharacter(reader){let char=readToken(reader);if((char)===("newline"
 function readQuote(reader){return list(stringToSymbol("quote"),read(reader));}
 function readList(reader,firstChar){return readUntil(reader,")");}
 function readArray(reader,firstChar){return readUntil(reader,"]");}
-function readStruct(reader,firstChar){return list(stringToSymbol("js/obj"),...readUntil(reader,"}"));}
+function readStruct(reader,firstChar){return list(stringToSymbol("dict"),...readUntil(reader,"}"));}
 function readUnmatchedDelimiter(reader,firstChar){return error(concat("Unmatched delimiter: ",firstChar));}
-function readString(reader,firstChar){let string="";while(true){let part=takeUntil(reader,(ch)=>{return isTruthy((ch)===("\""))||((ch)===("\\"));});let string2=concat(string,part);let char=readChar(reader);if(isNil(char)){return error("Unexpected EOF while reading string");}else if((char)===("\"")){return string2;}else if((char)===("\\")){let char=readChar(reader);let escapedChar=(()=>{if(isNil(char)){return error("Unexpected EOF while reading character escape");}else if((char)===("\"")){return char;}else if((char)===("\\")){return char;}else if((char)===("/")){return char;}else if((char)===("n")){return "\n";}else if((char)===("t")){return "\t";}else if((char)===("r")){return "\r";}else {return concat(error("Unrecognized character escape",char));}})();string=concat(string2,escapedChar);continue;}}}
+function readString(reader,firstChar){let string="";while(true){let part=takeUntil(reader,(ch)=>{return isTruthy((ch)===("\""))||((ch)===("\\"));});let string2=concat(string,part);let char=readChar(reader);if(isNil(char)){return error("Unexpected EOF while reading string");}else if((char)===("\"")){return string2;}else if((char)===("\\")){let char=readChar(reader);let escapedChar=(()=>{if(isNil(char)){return error("Unexpected EOF while reading character escape");}else if((char)===("\"")){return char;}else if((char)===("\\")){return char;}else if((char)===("/")){return char;}else if((char)===("n")){return "\n";}else if((char)===("t")){return "\t";}else if((char)===("r")){return "\r";}else if((char)===("u")){return readUnicodeChar(reader);}else {return concat(error("Unrecognized character escape",char));}})();string=concat(string2,escapedChar);continue;}}}
+function readUnicodeChar(reader){let a=readChar(reader);let b=readChar(reader);let c=readChar(reader);let d=readChar(reader);return String.fromCharCode(parseInt((a)+(b)+(c)+(d)));}
 hashMapSet(readerMacros,"'",readQuote);
 hashMapSet(readerMacros,"\\",readCharacter);
 hashMapSet(readerMacros,"\"",readString);
@@ -123,9 +131,10 @@ function emitMany(env,ctx,forms,sep){if(isTruthy(isNotEmpty(forms))){let [rest,l
 function emitDefn(env,ctx,args){if(isTruthy((ctx)!==(stringToKeyword("statement")))){error("Definitions cannot be used as expressions");}let funcName=defineVariable(env,first(args));let params=second(args);let rest=skip2(args);let docs=isTruthy(isString(first(rest)))&&(isNotEmpty(skip1(rest)))?first(rest):null;let body=docs?skip1(rest):rest;let funcEnv=childEnv(env);print("function ",funcName,"(");for(let [index,param]of params.entries()){if(isTruthy(isTaggedList(param,stringToSymbol("spread")))){print("...",defineVariable(funcEnv,second(param)));}else{print(defineVariable(funcEnv,param));}if(isTruthy((index)<((params.length)-(1)))){print(",");}}print("){");emitMany(funcEnv,stringToKeyword("return"),body,"");return print("}");}
 hashMapSet(analyzeSpecials,stringToSymbol("defn"),emitDefn);
 function emitSet(env,ctx,args){if(isTruthy((ctx)!==(stringToKeyword("statement")))){error("set! cannot be used as an expression");}let setter=first(args);let value=second(args);if(isSymbol(setter)){return emitSetVar(env,setter,value);}else if(isList(setter)){return emitSetter(env,setter,value);}else {return error(concat("Invalid setter: ",repr(setter)));}}
-function emitSetter(env,setter,value){let callable=first(setter);let args=skip1(setter);if(isFieldAccess(callable)){return emitSetField(env,callable,args,value);}else {return error(concat("Invalid setter: ",repr(setter)));}}
+function emitSetter(env,setter,value){let callable=first(setter);let args=skip1(setter);if(isFieldAccess(callable)){return emitSetField(env,callable,args,value);}else if((callable)===(stringToSymbol("js/index"))){return emitSetIndex(env,args,value);}else {return error(concat("Invalid setter: ",repr(setter)));}}
 function emitSetVar(env,symbol,value){let name=resolveVariable(env,symbol);print(".",name,"=");emit(env,stringToKeyword("expr"),value);return print(";");}
 function emitSetField(env,symbol,args,value){let fieldName=symbolToString(symbol).substring(2);let obj=first(args);emit(env,stringToKeyword("expr"),obj);print(".",fieldName,"=");emit(env,stringToKeyword("expr"),value);return print(";");}
+function emitSetIndex(env,args,value){let obj=first(args);let index=second(args);emit(env,stringToKeyword("expr"),obj);print("[");emit(env,stringToKeyword("expr"),index);print("]=");emit(env,stringToKeyword("expr"),value);return print(";");}
 hashMapSet(analyzeSpecials,stringToSymbol("set!"),emitSet);
 function emitReturn(env,ctx,args){if(isTruthy((ctx)===(stringToKeyword("expr")))){error("Return can only be used as a statement");}if(isTruthy(isEmpty(args))){return print("return;");}else{return emit(env,stringToKeyword("return"),first(args));}}
 hashMapSet(analyzeSpecials,stringToSymbol("js/return"),emitReturn);
@@ -146,6 +155,7 @@ hashMapSet(analyzeSpecials,stringToSymbol("+"),emitOp("+"));
 hashMapSet(analyzeSpecials,stringToSymbol("-"),emitOp("-"));
 hashMapSet(analyzeSpecials,stringToSymbol("*"),emitOp("*"));
 hashMapSet(analyzeSpecials,stringToSymbol("/"),emitOp("/"));
+hashMapSet(analyzeSpecials,stringToSymbol("mod"),emitOp("%"));
 hashMapSet(analyzeSpecials,stringToSymbol("js/instanceof"),emitOp("instanceof"));
 function emitSpread(env,ctx,args){if(isTruthy((ctx)!==(stringToKeyword("expr")))){error("Spread can only be used as an expression");}print("...");return emit(env,stringToKeyword("expr"),first(args));}
 hashMapSet(analyzeSpecials,stringToSymbol("spread"),emitSpread);
@@ -185,7 +195,7 @@ function emitIndex(env,ctx,args){let obj=first(args);let index=second(args);prin
 hashMapSet(analyzeSpecials,stringToSymbol("js/index"),emitIndex);
 function emitThrow(env,ctx,args){if(isTruthy((ctx)===(stringToKeyword("expr")))){error("throw cannot be used as an expression");}print("throw ");emit(env,stringToKeyword("expr"),first(args));return print(";");}
 hashMapSet(analyzeSpecials,stringToSymbol("js/throw"),emitThrow);
-function emitObj(env,ctx,args){printReturn(ctx);print("{");for(let [key,value]of grouped(args,2)){if(isTruthy(isKeyword(key))){print(JSON.stringify(kebabcaseToCamelcase(keywordToString(key))),":");}else{print(JSON.stringify(key),":");}emit(env,stringToKeyword("expr"),value);print(",");}print("}");return printEnd("}");}
-hashMapSet(analyzeSpecials,stringToSymbol("js/obj"),emitObj);
+function emitDict(env,ctx,args){printReturn(ctx);print("{");for(let [key,value]of grouped(args,2)){if(isTruthy(isKeyword(key))){print(JSON.stringify(kebabcaseToCamelcase(keywordToString(key))),":");}else{print(JSON.stringify(key),":");}emit(env,stringToKeyword("expr"),value);print(",");}print("}");return printEnd("}");}
+hashMapSet(analyzeSpecials,stringToSymbol("dict"),emitDict);
 let fs=require("fs");
 let text=fs.readFileSync(0,"utf-8");println("#! /usr/bin/env node");emitModule(stringToExprs(text));

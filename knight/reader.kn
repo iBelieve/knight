@@ -1,8 +1,8 @@
 ; -*- mode: Clojure -*-
 
 (defn make-string-reader [string]
-  (js/obj "input" string
-          "index" 0))
+  {input: string,
+   index: 0})
 
 (def reader-macros (hash-map))
 
@@ -91,7 +91,7 @@
   (read-until reader \]))
 
 (defn read-struct [reader first-char]
-  (list 'js/obj (spread (read-until reader \}))))
+  (list 'dict (spread (read-until reader \}))))
 
 (defn read-unmatched-delimiter [reader first-char]
   (error (concat "Unmatched delimiter: " first-char)))
@@ -115,8 +115,16 @@
                               [(= char \n) \newline]
                               [(= char \t) \tab]
                               [(= char \r) \return]
+                              [(= char \u) (read-unicode-char reader)]
                               [else (concat (error "Unrecognized character escape" char))])]
            (recur (concat string2 escaped-char)))]))))
+
+(defn read-unicode-char [reader]
+  (let [a (read-char reader),
+        b (read-char reader),
+        c (read-char reader),
+        d (read-char reader)]
+    (.fromCharCode js/String (js/parseInt (+ a b c d)))))
 
 (hash-map-set! reader-macros \' read-quote)
 (hash-map-set! reader-macros \\ read-character)

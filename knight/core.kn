@@ -38,17 +38,21 @@
   (js/instanceof value Keyword))
 
 (defn bool? [value]
-  (js/=== (js/typeof value) "boolean"))
+  (js/or (js/=== (js/typeof value) "boolean")
+         (js/instanceof value js/Boolean)))
 
 (defn number? [value]
-  (js/=== (js/typeof value) "number"))
+  (js/or (js/=== (js/typeof value) "number")
+         (js/instanceof value js/Number)))
 
 (defn char? [value]
-  (js/and (js/=== (js/typeof value) "string")
+  (js/and (js/or (js/=== (js/typeof value) "string")
+                 (js/instanceof value js/String))
           (js/=== (.-length value) 1)))
 
 (defn string? [value]
-  (js/=== (js/typeof value) "string"))
+  (js/or (js/=== (js/typeof value) "string")
+         (js/instanceof value js/String)))
 
 (defn list? [value]
   (.isArray js/Array value))
@@ -61,13 +65,23 @@
        (= (.-length list) 1)))
 
 (defn not-empty? [value]
-  (> (.-length value) 0))
+  (and (not-nil? value)
+       (> (.-length value) 0)))
 
 (defn list [(spread items)]
   (js/array (spread items)))
 
 (defn map [array func]
   (.map array func))
+
+(defn map-last [array func last-func]
+  (.map array
+        (fn [item index]
+          (if (= index (- (.-length array) 1))
+            (last-func item)
+            (if (nil? func)
+              item
+              (func item))))))
 
 (defn append [list (spread items)]
   (js/array (spread list) (spread items)))
@@ -196,3 +210,27 @@
 
 (defn set-contains? [set value]
   (.has set value))
+
+(defn box [value]
+  (cond
+    [(bool? value) (js/new js/Boolean value)]
+    [(number? value) (js/new js/Number value)]
+    [(string? value) (js/new js/String value)]
+    [else value]))
+
+(defn unbox [value]
+  (if (not-nil? value)
+    (.valueOf value)
+    nil))
+
+(def symbol-meta (js/Symbol "meta"))
+
+(defn meta [value]
+  (js/index value symbol-meta))
+
+(defn meta-set! [value meta]
+  (set! (js/index value symbol-meta) meta)
+  (js/return))
+
+(defn string-repeat [str count]
+  (.repeat str count))

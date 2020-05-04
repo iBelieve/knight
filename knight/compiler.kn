@@ -183,8 +183,8 @@
       (if (tagged-list? param 'spread)
         (print "..." (define-variable func-env (second param)))
         (print (define-variable func-env param)))
-        (if (< index (- (.-length params) 1))
-          (print ",")))
+      (if (< index (- (.-length params) 1))
+        (print ",")))
     (print "){")
     (emit-many func-env :return body "")
     (print "}")))
@@ -206,6 +206,7 @@
         args (skip1 setter)]
     (cond
       [(field-access? callable) (emit-set-field env callable args value)]
+      [(= callable 'js/index) (emit-set-index env args value)]
       [else (error (concat "Invalid setter: " (repr setter)))])))
 
 (defn emit-set-var [env symbol value]
@@ -219,6 +220,16 @@
         obj (first args)]
     (emit env :expr obj)
     (print "." field-name "=")
+    (emit env :expr value)
+    (print ";")))
+
+(defn emit-set-index [env args value]
+  (let [obj (first args)
+        index (second args)]
+    (emit env :expr obj)
+    (print "[")
+    (emit env :expr index)
+    (print "]=")
     (emit env :expr value)
     (print ";")))
 
@@ -262,6 +273,7 @@
 (hash-map-set! analyze-specials '- (emit-op "-"))
 (hash-map-set! analyze-specials '* (emit-op "*"))
 (hash-map-set! analyze-specials '/ (emit-op "/"))
+(hash-map-set! analyze-specials 'mod (emit-op "%"))
 (hash-map-set! analyze-specials 'js/instanceof (emit-op "instanceof"))
 
 (defn emit-spread [env ctx args]
@@ -544,7 +556,7 @@
 
 (hash-map-set! analyze-specials 'js/throw emit-throw)
 
-(defn emit-obj [env ctx args]
+(defn emit-dict [env ctx args]
   (print-return ctx)
   (print "{")
   (for [[key value] (grouped args 2)]
@@ -556,4 +568,4 @@
   (print "}")
   (print-end "}"))
 
-(hash-map-set! analyze-specials 'js/obj emit-obj)
+(hash-map-set! analyze-specials 'dict emit-dict)
