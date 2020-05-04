@@ -1,10 +1,31 @@
 ; -*- mode: Clojure -*-
+(js/require "source-map-support/register")
 
 (def fs (js/require "fs"))
 (def escodegen (js/require "escodegen"))
+(def terser (js/require "terser"))
+(def program (.-program (js/require "commander")))
 
-(let [text (.readFileSync fs 0 "utf-8"),
-      forms (string->exprs text)
+(.option program "-o, --output <filename>" "Output JS filename")
+(.option program "-m, --map" "Generate source maps")
+
+(.parse program (.-argv js/process))
+
+(let [output-filename (.-output program),
+      source-map-filename (if (.-map program) (if output-filename (+ output-filename ".map") "inline")),
+      code (.readFileSync fs 0 "utf-8"),
+      forms (string->exprs code),
       ast (emit-module forms),
-      output (.generate escodegen ast)]
-  (println output))
+      output (.generate escodegen ast {sourceMap: "stdin", sourceMapWithCode: true, sourceContent: code}),
+      source-map (.toString (.-map output)),
+      minified (.minify terser (.-code output) {toplevel: true,
+                                                sourceMap: (if source-map-filename
+                                                             {content: source-map, url: source-map-filename})})]
+  (if (.-error minified)
+    (.error js/console (.-error minified))
+    (if output-filename
+      (do
+        (.writeFileSync fs output-filename (.-code minified))
+        (if (and source-map-filename (!= source-map-filename "inline"))
+          (.writeFileSync fs source-map-filename (.toString (.-map minified)))))
+      (println (.-code minified)))))

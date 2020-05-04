@@ -7,7 +7,9 @@
   "author": "Michael Spencer <sonrisesoftware@gmail.com>",
   "license": "MIT",
   "dependencies": {
+    "commander": "^5.1.0",
     "escodegen": "^1.14.1",
-    "source-map-support": "^0.5.19"
+    "source-map-support": "^0.5.19",
+    "terser": "^4.6.13"
   }
 }

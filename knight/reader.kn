@@ -175,9 +175,9 @@
         form (read reader),
         end-pos (reader-pos reader)]
     (if (not-nil? form)
-      (meta-set! form {}));{source: (.-input reader),
-                ;  start: start-pos,
-                ;  end: end-pos}))
+      (meta-set! form {loc: {source: (.-input reader),
+                             start: start-pos,
+                             end: end-pos}}))
     form))
 
 (defn read-many [reader]
