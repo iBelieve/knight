@@ -11,7 +11,7 @@ knight.js: $(SRC)
 	cat $(SRC) | node build/knight.js > build/knight-compiled1.js
 	cat $(SRC) | node build/knight-compiled1.js > build/knight-compiled2.js
 	diff build/knight-compiled1.js build/knight-compiled2.js
-	mv build/knight-compiled1.js knight.js
+	mv build/knight-compiled1.js $@
 	chmod +x $@
 
 bootstrap: knight.scm $(SRC)

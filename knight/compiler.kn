@@ -2,7 +2,9 @@
 
 (def js-keywords (set "var" "let" "const"))
 
-(def analyze-specials (hash-map))
+(def emit-specials (hash-map))
+
+;; Predicates
 
 (defn field-access? [form]
   (and (symbol? form)
@@ -14,56 +16,49 @@
 
 (defn special? [form]
   (and (symbol? form)
-       (contains-key? analyze-specials form)))
-
-(defn make-env []
-  {variables: (hash-map)
-   recur-variables: nil})
-
-(defn child-env [env]
-  {variables: (hash-map-copy (.-variables env))
-   recur-variables: (if (not-nil? (.-recurVariables env))
-                      (array-copy (.-recurVariables env)))})
-
-(defn recur-env [env]
-  {variables: (hash-map-copy (.-variables env))
-   recur-variables: (js/array)})
-
-(defn append-recur-var [env var]
-  (.push (.-recurVariables env) var))
-
-(defn knight-quote [form]
-  (cond
-    [(symbol? form) (list 'string->symbol (symbol->string form))]
-    [(list? form) (append (list 'js/array) (map knight-quote form))]
-    [else form]))
-
-(defn ctx-statement [ctx]
-  (if (= ctx :expr)
-    :expr
-    :statement))
-
-(defn ctx-return [ctx]
-  (if (= ctx :statement)
-    :statement
-    :return))
-
-(defn print-return [ctx]
-  (if (= ctx :return)
-    (print "return ")))
-
-(defn print-end [ctx]
-  (if (or (= ctx :return)
-          (= ctx :statement))
-    (print ";")))
+       (contains-key? emit-specials form)))
 
 (defn js-keyword? [ident]
   (set-contains? js-keywords ident))
 
-(defn sanitize-js-keywords [ident]
-  (if (js-keyword? ident)
-    (concat ident "$")
-    ident))
+(defn expression? [node]
+  (let [type (.-type node)]
+    (or (= type "Literal")
+        (= type "Identifier")
+        (string-suffix? type "Expression")
+        (string-suffix? type "Element"))))
+
+;; Environment
+
+(defn compiler-error [form msg]
+  (if (and (meta form) (.-loc (meta form)))
+    (let [loc (.-loc (meta form)),
+          line-index (- (.-line (.-start loc)) 1),
+          after-line-index (+ line-index 1),
+          before-line-index (- line-index 1),
+          lines (.split (.-source loc) \newline),
+          line (js/index lines line-index),
+          after-line (js/index lines after-line-index),
+          before-line (js/index lines before-line-index),
+          col (.-column (.-start loc)),
+          caret-line (concat (string-repeat " " col) "^")]
+      (error (+ msg "\n\n" before-line "\n" line "\n" caret-line "\n" after-line)))
+    (error msg)))
+
+(defn make-env []
+  {variables: (hash-map),
+   is-loop: false})
+
+(defn child-env [env]
+  {variables: (hash-map-copy (.-variables env))
+   loop-variables: (if (not-nil? (.-loopVariables env))
+                     (array-copy (.-loopVariables env))),
+   is-loop: false})
+
+(defn recur-env [env]
+  {variables: (hash-map-copy (.-variables env))
+   loop-variables: (js/array),
+   is-loop: true})
 
 (defn replace-special-chars [ident]
   (.replace (.replace (.replace (.replace ident "!" "")
@@ -72,105 +67,231 @@
             (regex "^(.*)\\?$") "is-$1"))
 
 (defn kebabcase->camelcase [ident]
-  (sanitize-js-keywords (.replace (replace-special-chars ident)
-                                  (regex "[-_]([a-zA-Z])" "g")
-                                  (fn [match p1] (.toUpperCase p1)))))
+  (.replace (replace-special-chars ident)
+            (regex "[-_]([a-zA-Z])" "g")
+            (fn [match p1] (.toUpperCase p1))))
+
+(defn sanitize-js-keywords [ident]
+  (if (js-keyword? ident)
+    (concat ident "$")
+    ident))
 
 (defn symbol->ident [symbol]
   (cond
     [(= symbol 'Symbol) "LispSymbol"]
-    [else (kebabcase->camelcase (symbol->string symbol))]))
+    [else (sanitize-js-keywords (kebabcase->camelcase (symbol->string symbol)))]))
 
 (defn define-variable [env symbol]
   (let [variables (.-variables env)]
     (if (not (contains-key? variables symbol))
       (hash-map-set! variables symbol (symbol->ident symbol)))
-    (hash-map-get variables symbol)))
+    (if (.-isLoop env)
+      (.push (.-loopVariables env) symbol))
+    (resolve-var env symbol)))
 
-(defn resolve-variable [env symbol]
-  (if (string-prefix? (symbol->string symbol) "js/")
-    (.substring (symbol->string symbol) 3)
-    (let [variables (.-variables env)]
+(defn define-function [env symbol]
+  (let [variables (.-variables env)]
+    (if (not (contains-key? variables symbol))
+      (hash-map-set! variables symbol (symbol->ident symbol)))
+    (resolve-var env symbol)))
+
+(defn resolve-var [env symbol]
+  (let [variables (.-variables env),
+        string (symbol->string symbol),
+        loc (if (meta symbol) (.-loc (meta symbol)))]
+    (if (string-prefix? string "js/")
+      {type: "Identifier",
+       name: (.substring string 3),
+       originalName: string,
+       loc: loc}
       (if (not (contains-key? variables symbol))
-        (error (concat "Symbol not found: " (symbol->string symbol))))
-      (hash-map-get variables symbol))))
+        (compiler-error symbol (+ "Symbol not found: " string))
+        {type: "Identifier",
+         name: (hash-map-get variables symbol),
+         originalName: (symbol->string symbol),
+         loc: loc}))))
 
-(defn emit-module [exprs]
+;; AST Transformation
+
+(defn statement->iife [node]
+  {type: "CallExpression",
+   callee: {type: "ArrowFunctionExpression",
+            id: nil,
+            params: (js/array),
+            body: {type: "BlockStatement",
+                   body: (js/array (statement->return node)),
+                   loc: (.-loc node)}},
+   arguments: (js/array)})
+
+(defn statement->expression [node]
+  (statement->iife node))
+
+(defn statements->return [nodes]
+  (if (empty? nodes)
+    (js/array {:type "ReturnStatement",
+               :argument nil})
+    (map-last nodes nil statement->return)))
+
+(defn statement->return [node]
+  (let [type (.-type node)]
+    (cond
+      [(= type "ReturnStatement") node]
+      [(= type "ForOfStatement") node]
+      [(= type "ContinueStatement") node]
+      [(= type "ThrowStatement") node]
+      [(= type "ExpressionStatement")
+       {type: "ReturnStatement",
+        argument: (.-expression node),
+        loc: (.-loc node)}]
+      [(= type "BlockStatement")
+       {type: "BlockStatement",
+        body: (statements->return (.-body node)),
+        loc: (.-loc node)}]
+      [(= type "WhileStatement")
+       {type: "WhileStatement",
+        test: (.-test node),
+        body: (statement->return (.-body node)),
+        loc: (.-loc node)}]
+      [(= type "IfStatement")
+       {type: "IfStatement",
+        test: (.-test node),
+        consequent: (statement->return (.-consequent node)),
+        alternate: (if (.-alternate node)
+                       (statement->return (.-alternate node))
+                       nil),
+        loc: (.-loc node)}]
+      [else (error (concat "Unsupported return statement: " type))])))
+
+;; AST Generation of specific types
+
+(defn emit-return-last [env forms]
+  (map-last forms (fn [form] (emit-statement env form))
+                  (fn [form] (emit-return-statement env form))))
+
+(defn emit-return-block [env forms]
+  {type: "BlockStatement",
+   body: (emit-return-last env forms)})
+
+(defn emit-return-statement [env form]
+  (let [node (emit env form)]
+    (if (expression? node)
+      {type: "ReturnStatement",
+       argument: node,
+       loc: (.-loc node)}
+      (statement->return node))))
+
+(defn emit-statements [env forms]
+  (map forms (fn [form] (emit-statement env form))))
+
+(defn emit-statement [env form]
+  (let [node (emit env form)]
+    (if (expression? node)
+      {type: "ExpressionStatement",
+       expression: node,
+       loc: (.-loc node)}
+      node)))
+
+(defn emit-expressions [env forms]
+  (map forms (fn [form] (emit-expression env form))))
+
+(defn emit-expression [env form]
+  (let [node (emit env form)]
+    (if (expression? node)
+      node
+      (statement->expression node))))
+
+(defn emit-patterns [env forms]
+  (map forms (fn [form] (emit-pattern env form))))
+
+(defn emit-pattern [env form]
+  (cond
+    [(symbol? form)
+     (define-variable env form)]
+    [(tagged-list? form 'spread)
+     {type: "RestElement",
+      argument: (define-variable env (second form)),
+      loc: (.-loc (meta form))}]
+    [(list? form)
+     {type: "ArrayPattern",
+      elements: (emit-patterns env form)}]
+    [else (compiler-error form "Unrecognized pattern")]))
+
+(defn emit-block [env forms]
+  (if (single? forms)
+    (emit-statement env (first forms))
+    {type: "BlockStatement",
+     body: (emit-statements env forms)}))
+
+;; AST Generation
+
+(defn emit-module [forms]
   (let [env (make-env)]
-    (for [expr exprs]
-      (if (tagged-list? expr 'defn)
-        (define-variable env (second expr))))
-    (emit-many env :statement exprs "\n")
-    (println)))
+    (for [form forms]
+      (if (tagged-list? form 'defn)
+        (define-variable env (second form))))
+    {type: "Program",
+     body: (emit-statements env forms)}))
 
-(defn emit [env ctx form]
+(defn emit [env form]
   (cond
-    [(symbol? form) (emit-var env ctx form)]
-    [(list? form) (emit-list env ctx form)]
-    [else (emit-literal env ctx form)]))
+    [(symbol? form) (emit-var env form)]
+    [(list? form) (emit-list env form)]
+    [else (emit-literal env form)]))
 
-(defn emit-literal [env ctx form]
-  (print-return ctx)
+(defn emit-literal [env form]
   (cond
-    [(keyword? form) (print "stringToKeyword(" (.stringify js/JSON (keyword->string form)) ")")]
-    [else (print (.stringify js/JSON form))])
-  (print-end ctx))
+    [(js/=== form js/undefined) (error "Undefined!")]
+    [(keyword? form) (emit env (list 'string->keyword (keyword->string form)))]
+    [else {type: "Literal",
+           value: (unbox form),
+           loc: (if (and (not-nil? form) (meta form)) (.-loc (meta form)))}]))
 
-(defn emit-var [env ctx symbol]
-  (let [name (resolve-variable env symbol)]
-    (print-return ctx)
-    (print name)
-    (print-end ctx)))
+(defn emit-var [env symbol]
+  (resolve-var env symbol))
 
-(defn emit-list [env ctx form]
-  (let [callable (first form)
+(defn emit-list [env form]
+  (let [loc (if (meta form) (.-loc (meta form))),
+        callee (first form),
         args (skip1 form)]
     (cond
-      [(field-access? callable) (emit-field env ctx callable args)]
-      [(method-call? callable) (emit-methodcall env ctx callable args)]
-      [(special? callable) ((hash-map-get analyze-specials callable) env ctx args)]
-      [else (emit-funcall env ctx callable args)])))
+      [(field-access? callee) (emit-field env loc callee args)]
+      [(method-call? callee) (emit-methodcall env loc callee args)]
+      [(special? callee) ((hash-map-get emit-specials callee) env loc args)]
+      [else (emit-funcall env loc callee args)])))
 
-(defn emit-field [env ctx callable args]
-  (let [field-name (.substring (symbol->string callable) 2)
+(defn emit-field [env loc callee args]
+  (let [field-name (.substring (symbol->string callee) 2)
         obj (first args)]
-    (print-return ctx)
-    (emit env :expr obj)
-    (print "." field-name)
-    (print-end ctx)))
+    {type: "MemberExpression",
+     object: (emit-expression env obj),
+     property: {type: "Identifier",
+                name: field-name,
+                loc: (.-loc (meta callee))},
+     computed: false,
+     loc: loc}))
 
-(defn emit-methodcall [env ctx callable args]
-  (let [method-name (.substring (symbol->string callable) 1)
+(defn emit-methodcall [env loc callee args]
+  (let [method-name (.substring (symbol->string callee) 1)
         obj (first args)
         method-args (skip1 args)]
-    (print-return ctx)
-    (emit env :expr obj)
-    (print "." method-name "(")
-    (emit-many env :expr method-args ",")
-    (print ")")
-    (print-end ctx)))
+    {type: "CallExpression",
+     callee: {type: "MemberExpression",
+              object: (emit-expression env obj),
+              property: {type: "Identifier",
+                         name: method-name,
+                         loc: (.-loc (meta callee))},
+              computed: false},
+     arguments: (emit-expressions env method-args),
+     loc: loc}))
 
-(defn emit-funcall [env ctx callable args]
-  (print-return ctx)
-  (emit env :expr callable)
-  (print "(")
-  (emit-many env :expr args ",")
-  (print ")")
-  (print-end ctx))
+(defn emit-funcall [env loc callee args]
+  {type: "CallExpression",
+   callee: (emit-expression env callee),
+   arguments: (emit-expressions env args),
+   loc: loc})
 
-(defn emit-many [env ctx forms sep]
-  (if (not-empty? forms)
-    (let [[rest last-form] (split-last forms)]
-      (for [form rest]
-        (emit env (ctx-statement ctx) form)
-        (if sep
-          (print sep)))
-      (emit env ctx last-form))))
-
-(defn emit-defn [env ctx args]
-  (if (js/!== ctx :statement)
-    (error "Definitions cannot be used as expressions"))
-  (let [func-name (define-variable env (first args))
+(defn emit-defn [env loc args]
+  (let [ident (define-function env (first args))
         params (second args)
         rest (skip2 args)
         docs (if (and (string? (first rest))
@@ -178,394 +299,321 @@
                  (first rest))
         body (if docs (skip1 rest) rest)
         func-env (child-env env)]
-    (print "function " func-name "(")
-    (for [[index param] (.entries params)]
-      (if (tagged-list? param 'spread)
-        (print "..." (define-variable func-env (second param)))
-        (print (define-variable func-env param)))
-      (if (< index (- (.-length params) 1))
-        (print ",")))
-    (print "){")
-    (emit-many func-env :return body "")
-    (print "}")))
+    {type: "FunctionDeclaration",
+     id: ident,
+     params: (emit-patterns func-env params),
+     body: (emit-return-block func-env body),
+     loc: loc}))
 
-(hash-map-set! analyze-specials 'defn emit-defn)
+(hash-map-set! emit-specials 'defn emit-defn)
 
-(defn emit-set [env ctx args]
-  (if (js/!== ctx :statement)
-    (error "set! cannot be used as an expression"))
+(defn emit-defgen [env loc args]
+  (let [ident (define-function env (first args))
+        params (second args)
+        rest (skip2 args)
+        docs (if (and (string? (first rest))
+                      (not-empty? (skip1 rest)))
+                 (first rest))
+        body (if docs (skip1 rest) rest)
+        func-env (child-env env)]
+    {type: "FunctionDeclaration",
+     id: ident,
+     params: (emit-patterns func-env params),
+     body: (emit-return-block func-env body),
+     generator: true,
+     loc: loc}))
+
+(hash-map-set! emit-specials 'defgen emit-defgen)
+
+(defn emit-return [env loc args]
+  {type: "ReturnStatement",
+   argument: (if (not-empty? args) (emit-expression env (first args))),
+   loc: loc})
+
+(hash-map-set! emit-specials 'return emit-return)
+
+(defn emit-set [env loc args]
   (let [setter (first args)
         value (second args)]
     (cond
-      [(symbol? setter) (emit-set-var env setter value)]
-      [(list? setter) (emit-setter env setter value)]
+      [(symbol? setter) (emit-set-var env loc setter value)]
+      [(list? setter) (emit-setter env loc setter value)]
       [else (error (concat "Invalid setter: " (repr setter)))])))
 
-(defn emit-setter [env setter value]
-  (let [callable (first setter)
+(defn emit-setter [env loc setter value]
+  (let [callee (first setter)
         args (skip1 setter)]
     (cond
-      [(field-access? callable) (emit-set-field env callable args value)]
-      [(= callable 'js/index) (emit-set-index env args value)]
+      [(field-access? callee) (emit-set-field env loc callee args value)]
+      [(= callee 'js/index) (emit-set-index env loc args value)]
       [else (error (concat "Invalid setter: " (repr setter)))])))
 
-(defn emit-set-var [env symbol value]
-  (let [name (resolve-variable env symbol)]
-    (print "." name "=")
-    (emit env :expr value)
-    (print ";")))
+(defn emit-set-var [env loc symbol value]
+  {type: "AssignmentExpression",
+   operator: "=",
+   left: (resolve-var env symbol),
+   right: (emit-expression env value),
+   loc: loc})
 
-(defn emit-set-field [env symbol args value]
+(defn emit-set-field [env loc symbol args value]
   (let [field-name (.substring (symbol->string symbol) 2)
         obj (first args)]
-    (emit env :expr obj)
-    (print "." field-name "=")
-    (emit env :expr value)
-    (print ";")))
+    {type: "AssignmentExpression",
+     operator: "=",
+     left: {type: "MemberExpression",
+            object: (emit-expression env obj),
+            property: {type: "Identifier",
+                       name: field-name,
+                       loc: (.-loc (meta symbol))},
+            computed: false},
+     right: (emit-expression env value),
+     loc: loc}))
 
-(defn emit-set-index [env args value]
+(defn emit-set-index [env loc args value]
   (let [obj (first args)
         index (second args)]
-    (emit env :expr obj)
-    (print "[")
-    (emit env :expr index)
-    (print "]=")
-    (emit env :expr value)
-    (print ";")))
+    {type: "AssignmentExpression",
+     operator: "=",
+     left: {type: "MemberExpression",
+            object: (emit-expression env obj),
+            property: (emit-expression env index),
+            computed: true},
+     right: (emit-expression env value),
+     loc: loc}))
 
-(hash-map-set! analyze-specials 'set! emit-set)
+(hash-map-set! emit-specials 'set! emit-set)
 
-(defn emit-return [env ctx args]
-  (if (= ctx :expr)
-    (error "Return can only be used as a statement"))
-  (if (empty? args)
-    (print "return;")
-    (emit env :return (first args))))
-
-(hash-map-set! analyze-specials 'js/return emit-return)
-
-(defn emit-op [op]
-  (fn [env ctx args]
+(defn emit-bin-op [op]
+  (fn [env loc args]
     (if (empty? args)
-      (error "Empty operator call"))
-    (print-return ctx)
-    (for [[index arg] (.entries args)]
-      (print "(")
-      (emit env :expr arg)
-      (print ")")
-      (if (< index (- (.-length args) 1))
-        (print op)))
-    (print-end ctx)))
+      (error "Empty operator expression"))
+    (.reduce (emit-expressions env args)
+            (fn [acc, arg]
+              {type: "BinaryExpression",
+               operator: op,
+               left: acc,
+               right: arg,
+               loc: loc}))))
 
-(hash-map-set! analyze-specials 'js/and (emit-op "&&"))
-(hash-map-set! analyze-specials 'js/or (emit-op "||"))
-(hash-map-set! analyze-specials 'js/== (emit-op "=="))
-(hash-map-set! analyze-specials 'js/!= (emit-op "!="))
-(hash-map-set! analyze-specials 'js/=== (emit-op "==="))
-(hash-map-set! analyze-specials 'js/!== (emit-op "!=="))
-(hash-map-set! analyze-specials '= (emit-op "==="))
-(hash-map-set! analyze-specials '!= (emit-op "!=="))
-(hash-map-set! analyze-specials '> (emit-op ">"))
-(hash-map-set! analyze-specials '< (emit-op "<"))
-(hash-map-set! analyze-specials '<= (emit-op "<="))
-(hash-map-set! analyze-specials '>= (emit-op ">="))
-(hash-map-set! analyze-specials '+ (emit-op "+"))
-(hash-map-set! analyze-specials '- (emit-op "-"))
-(hash-map-set! analyze-specials '* (emit-op "*"))
-(hash-map-set! analyze-specials '/ (emit-op "/"))
-(hash-map-set! analyze-specials 'mod (emit-op "%"))
-(hash-map-set! analyze-specials 'js/instanceof (emit-op "instanceof"))
+(hash-map-set! emit-specials 'and (emit-bin-op "&&"))
+(hash-map-set! emit-specials 'or (emit-bin-op "||"))
+(hash-map-set! emit-specials 'js/and (emit-bin-op "&&"))
+(hash-map-set! emit-specials 'js/or (emit-bin-op "||"))
+(hash-map-set! emit-specials 'js/=== (emit-bin-op "==="))
+(hash-map-set! emit-specials 'js/!== (emit-bin-op "!=="))
+(hash-map-set! emit-specials 'js/== (emit-bin-op "=="))
+(hash-map-set! emit-specials 'js/!= (emit-bin-op "!="))
+(hash-map-set! emit-specials '= (emit-bin-op "==="))
+(hash-map-set! emit-specials '!= (emit-bin-op "!=="))
+(hash-map-set! emit-specials '>= (emit-bin-op ">="))
+(hash-map-set! emit-specials '<= (emit-bin-op "<="))
+(hash-map-set! emit-specials '> (emit-bin-op ">"))
+(hash-map-set! emit-specials '< (emit-bin-op "<"))
+(hash-map-set! emit-specials '+ (emit-bin-op "+"))
+(hash-map-set! emit-specials '- (emit-bin-op "-"))
+(hash-map-set! emit-specials 'mod (emit-bin-op "%"))
+(hash-map-set! emit-specials 'js/instanceof (emit-bin-op "instanceof"))
 
-(defn emit-spread [env ctx args]
-  (if (js/!== ctx :expr)
-    (error "Spread can only be used as an expression"))
-  (print "...")
-  (emit env :expr (first args)))
+(defn emit-spread [env loc args]
+  {type: "SpreadElement",
+   argument: (emit-expression env (first args)),
+   loc: loc})
 
-(hash-map-set! analyze-specials 'spread emit-spread)
+(hash-map-set! emit-specials 'spread emit-spread)
 
-(defn emit-for [env ctx args]
-  (if (= ctx :expr)
-    (error "For loop cannot be used as an expression. Use map instead"))
+(defn emit-array [env loc args]
+  {type: "ArrayExpression",
+   elements: (emit-expressions env args),
+   loc: loc})
+
+(hash-map-set! emit-specials 'js/array emit-array)
+
+(defn emit-fn [env loc args]
+  (let [params (first args)
+        body (skip1 args)
+        func-env (child-env env)]
+    {type: "ArrowFunctionExpression",
+     id: nil,
+     params: (emit-patterns func-env params),
+     body: (emit-return-block func-env body),
+     loc: loc}))
+
+(hash-map-set! emit-specials 'fn emit-fn)
+
+(defn emit-if [env loc args]
+  (let [test (first args)
+        if-true (second args)
+        if-false (skip2 args)]
+    {type: "IfStatement",
+     test: (emit-expression env test),
+     consequent: (emit-statement env if-true),
+     alternate: (if (not-nil? if-false) (emit-block env if-false)),
+     loc: loc}))
+
+(hash-map-set! emit-specials 'if emit-if)
+
+(defn emit-for [env loc args]
   (let [var (first (first args))
         value (second (first args))
         body (skip1 args)
         for-env (child-env env)]
-    (print "for(")
-    (if (list? var)
-      (print "let [" (string-join (map var (fn [var] (define-variable for-env var))) ",") "]of ")
-      (print "let " (define-variable for-env var) " of "))
-    (emit for-env :expr value)
-    (print "){")
-    (emit-many for-env :statement body "")
-    (print "}")))
+    {type: "ForOfStatement",
+     left: (emit-pattern for-env var),
+     right: (emit-expression for-env value),
+     body: (emit-block for-env body),
+     loc: loc}))
 
-(hash-map-set! analyze-specials 'for emit-for)
+(hash-map-set! emit-specials 'for emit-for)
 
-(defn emit-def [env ctx args]
-  (if (!= ctx :statement)
-    (error "Definitions cannot be used as expressions"))
-  (let [var-name (define-variable env (first args))
-        init-form (second args)]
-    (print "let " var-name "=")
-    (if init-form
-      (emit env :expr init-form))
-    (print ";")))
+(defn emit-def [env loc args]
+  {type: "VariableDeclaration",
+   kind: "let",
+   declarations: (js/array {type: "VariableDeclarator",
+                            id: (define-variable env (first args)),
+                            init: (emit-expression env (second args)),
+                            loc: loc}),
+   loc: loc})
 
-(hash-map-set! analyze-specials 'def emit-def)
+(hash-map-set! emit-specials 'def emit-def)
 
-(defn emit-if [env ctx args]
-  (let [test (first args)
-        if-true (second args)
-        if-false (skip2 args)]
-    (if (= ctx :expr)
-      (do
-        (emit env :expr test)
-        (print "?")
-        (emit env :expr if-true)
-        (print ":")
-        (cond
-          [(empty? if-false)
-           (print "null")]
-          [(single? if-false)
-           (emit env :expr (first if-false))]
-          [else
-           (print "(")
-           (emit-many env :expr if-false ",")
-           (print ")")]))
-      (do
-        (print "if(isTruthy(")
-        (emit env :expr test)
-        (print ")){")
-        (emit env ctx if-true)
-        (if (not-empty? if-false)
-          (do
-            (print "}else{")
-            (emit-many env ctx if-false "")
-            (print "}"))
-          (if (= ctx :return)
-            (print "}else{return;}")
-            (print "}")))))))
+(defn emit-vars [env vars]
+  {type: "VariableDeclaration",
+   kind: "let",
+   declarations: (map (.from js/Array (grouped vars 2))
+                      (fn [pair]
+                        {type: "VariableDeclarator",
+                        id: (define-variable env (first pair)),
+                        init: (emit-expression env (second pair))})),
+   loc: (.-loc (meta vars))})
 
-(hash-map-set! analyze-specials 'if emit-if)
-
-(defn emit-or [env ctx args]
-  (if (empty? args)
-    (error "Empty operator expression: or"))
-  (print-return ctx)
-  (for [[index arg] (.entries args)]
-    (if (< index (- (.-length args) 1))
-      (print "isTruthy"))
-    (print "(")
-    (emit env :expr arg)
-    (print ")")
-    (if (< index (- (.-length args) 1))
-      (print "||")))
-  (print-end ctx))
-
-(hash-map-set! analyze-specials 'or emit-or)
-
-(defn emit-and [env ctx args]
-  (if (empty? args)
-    (error "Empty operator expression: and"))
-  (print-return ctx)
-  (for [[index arg] (.entries args)]
-    (if (< index (- (.-length args) 1))
-      (print "isTruthy"))
-    (print "(")
-    (emit env :expr arg)
-    (print ")")
-    (if (< index (- (.-length args) 1))
-      (print "&&")))
-  (print-end ctx))
-
-(hash-map-set! analyze-specials 'and emit-and)
-
-(defn emit-let [env ctx args]
-  (if (= ctx :expr)
-    (error "let cannot be used as an expressin currently"))
+(defn emit-let [env loc args]
   (let [vars (first args)
         body (skip1 args)
         let-env (child-env env)]
-    (for [[var value] (grouped vars 2)]
-      (if (list? var)
-        (print "let [" (string-join (map var (fn [var] (define-variable env var))) ",") "]=")
-        (print "let " (define-variable env var) "="))
-      (emit env :expr value)
-      (print ";"))
-    (emit-many env ctx body "")))
+    {type: "BlockStatement",
+     body: (js/array (emit-vars let-env vars) (spread (emit-statements let-env body))),
+     loc: loc}))
 
-(hash-map-set! analyze-specials 'let emit-let)
+(hash-map-set! emit-specials 'let emit-let)
 
-(defn emit-cond [env ctx args]
-  (if (= ctx :expr)
-    (print "(()=>{"))
-  (for [[index expr] (.entries args)]
-    (let [test (first expr)
+(defn emit-cond [env loc args]
+  (defn emit-branch [args]
+    (let [expr (first args),
+          rest (skip1 args),
+          test (first expr),
           body (skip1 expr)]
-      (if (!= index 0)
-        (print "else "))
       (if (= test 'else)
-        (print "{")
-        (do
-          (print "if(")
-          (emit env :expr test)
-          (print "){")))
-      (emit-many env (ctx-return ctx) body "")
-      (print "}")))
-  (if (= ctx :expr)
-    (print "})()")))
+        (emit-block env body)
+        {type: "IfStatement",
+         test: (emit-expression env test),
+         consequent: (emit-block env body),
+         alternate: (if (not-empty? rest) (emit-branch rest))})))
+  (emit-branch args))
 
-(hash-map-set! analyze-specials 'cond emit-cond)
+(hash-map-set! emit-specials 'cond emit-cond)
 
-(defn emit-defgen [env ctx args]
-  (if (js/!== ctx :statement)
-    (error "Definitions cannot be used as expressions"))
-  (let [func-name (define-variable env (first args))
-        params (second args)
-        rest (skip2 args)
-        docs (if (and (string? (first rest))
-                      (not-empty? (skip1 rest)))
-                 (first rest))
-        body (if docs (skip1 rest) rest)
-        func-env (child-env env)]
-    (print "function* " func-name "(")
-    (for [[index param] (.entries params)]
-      (if (tagged-list? param 'spread)
-        (print "..." (define-variable func-env (second param)))
-        (print (define-variable func-env param)))
-        (if (< index (- (.-length params) 1))
-          (print ",")))
-    (print "){")
-    (emit-many func-env :return body "")
-    (print "}")))
-
-(hash-map-set! analyze-specials 'defgen emit-defgen)
-
-(defn emit-loop [env ctx args]
-  (if (= ctx :expr)
-    (print "(()=>{"))
+(defn emit-loop [env loc args]
   (let [vars (first args)
         body (skip1 args)
         loop-env (recur-env env)]
-    (for [[var value] (grouped vars 2)]
-      (let [name (define-variable loop-env var)]
-        (append-recur-var loop-env name)
-        (print "let " name "=")
-        (emit loop-env :expr value)
-        (print ";")))
-    (print "while(true){")
-    (emit-many loop-env :return body ""))
-  (print "}")
-  (if (= ctx :expr)
-    (print "})()")))
+    (if (empty? vars)
+      {type: "WhileStatement",
+       test: (emit-literal loop-env true),
+       body: (emit-return-block loop-env body)}
+      {type: "BlockStatement",
+       body: (js/array (emit-vars loop-env vars)
+                       {type: "WhileStatement",
+                        test: (emit-literal loop-env true),
+                        body: (emit-return-block loop-env body)})})))
 
-(hash-map-set! analyze-specials 'loop emit-loop)
+(hash-map-set! emit-specials 'loop emit-loop)
 
-(defn emit-do [env ctx args]
-  (print "{")
-  (emit-many env ctx args "")
-  (print "}"))
+(defn emit-do [env loc args]
+  {type: "BlockStatement",
+   body: (emit-statements env args),
+   loc: loc})
 
-(hash-map-set! analyze-specials 'do emit-do)
+(hash-map-set! emit-specials 'do emit-do)
 
-(defn emit-yield [env ctx args]
-  (if (= ctx :expr)
-    (error "Yield can only be used as a statement"))
-  (print "yield ")
-  (emit env :expr (first args))
-  (print ";"))
+(defn emit-yield [env loc args]
+  {type: "YieldExpression",
+   argument: (emit-expression env (first args)),
+   loc: loc})
 
-(hash-map-set! analyze-specials 'yield emit-yield)
+(hash-map-set! emit-specials 'yield emit-yield)
 
-(defn emit-recur [env ctx args]
-  (if (= ctx :expr)
-    (error "Recur can only be used as a statement"))
-  (for [[var value] (zip (.-recurVariables env) args)]
-    (print var "=")
-    (emit env :expr value)
-    (print ";"))
-  (print "continue;"))
+(defn emit-recur [env loc args]
+  (if (!= (.-length (.-loopVariables env)) (.-length args))
+    (error (+ "Recur with not enough args" (.-length (.-loopVariables env)) (.-length args))))
+  (if (empty? args)
+    {type: "ContinueStatement",
+     loc: loc}
+    {type: "BlockStatement",
+    body: (js/array (spread (map (zip (.-loopVariables env) args)
+                                  (fn [pair]
+                                    {type: "ExpressionStatement",
+                                    expression: {type: "AssignmentExpression",
+                                                  operator: "=",
+                                                  left: (emit-pattern env (first pair)),
+                                                  right: (emit-expression env (second pair))}})))
+                    {type: "ContinueStatement"}),
+    loc: loc}))
 
-(hash-map-set! analyze-specials 'recur emit-recur)
+(hash-map-set! emit-specials 'recur emit-recur)
 
-(defn emit-fn [env ctx args]
-  (print-return ctx)
-  (let [params (first args)
-        body (skip1 args)
-        func-env (child-env env)]
-    (print "(")
-    (for [[index param] (.entries params)]
-      (if (tagged-list? param 'spread)
-        (print "..." (define-variable func-env (second param)))
-        (print (define-variable func-env param)))
-        (if (< index (- (.-length params) 1))
-          (print ",")))
-    (print ")=>{")
-    (emit-many func-env :return body "")
-    (print "}"))
-  (print-end ctx))
+(defn emit-dict [env ctx args]
+  {type: "ObjectExpression",
+   properties: (map (.from js/Array (grouped args 2))
+                    (fn [pair]
+                      {type: "Property",
+                       key: (if (keyword? (first pair))
+                              (emit-literal env (kebabcase->camelcase (keyword->string (first pair))))
+                              (emit-literal env (first pair))),
+                       value: (emit-expression env (second pair))}))})
 
-(hash-map-set! analyze-specials 'fn emit-fn)
+(hash-map-set! emit-specials 'dict emit-dict)
 
-(defn emit-quote [env ctx args]
-  (emit env ctx (knight-quote (first args))))
+(defn emit-quote [env loc args]
+  (emit env (knight-quote (first args))))
 
-(hash-map-set! analyze-specials 'quote emit-quote)
+(defn knight-quote [form]
+  (cond
+    [(symbol? form) (list 'string->symbol (symbol->string form))]
+    [(list? form) (append (list 'js/array) (map knight-quote form))]
+    [else form]))
 
-(defn emit-array [env ctx args]
-  (print-return ctx)
-  (print "[")
-  (emit-many env :expr args ",")
-  (print "]")
-  (print-end ctx))
+(hash-map-set! emit-specials 'quote emit-quote)
 
-(hash-map-set! analyze-specials 'js/array emit-array)
+(defn emit-return [env loc args]
+  {type: "ReturnStatement",
+   argument: (if (not-empty? args)
+               (emit-expression env (first args))
+               nil),
+   loc: loc})
 
-(defn emit-new [env ctx args]
-  (let [callable (first args)
-        new-args (skip1 args)]
-    (print-return ctx)
-    (print "new ")
-    (emit env :expr callable)
-    (print "(")
-    (emit-many env :expr new-args ",")
-    (print ")")
-    (print-end ctx)))
+(hash-map-set! emit-specials 'js/return emit-return)
 
-(hash-map-set! analyze-specials 'js/new emit-new)
+(defn emit-throw [env loc args]
+  {type: "ThrowStatement",
+   argument: (emit-expression env (first args)),
+   loc: loc})
+
+(hash-map-set! emit-specials 'js/throw emit-throw)
+
+(defn emit-new [env loc args]
+  {type: "NewExpression",
+   callee: (emit-expression env (first args)),
+   arguments: (emit-expressions env (skip1 args)),
+   loc: loc})
+
+(hash-map-set! emit-specials 'js/new emit-new)
 
 (defn emit-index [env ctx args]
   (let [obj (first args)
         index (second args)]
-    (print-return ctx)
-    (emit env :expr obj)
-    (print "[")
-    (emit env :expr index)
-    (print "]")
-    (print-end ctx)))
+    {type: "MemberExpression",
+     object: (emit-expression env obj),
+     property: (emit-expression env index),
+     computed: true}))
 
-(hash-map-set! analyze-specials 'js/index emit-index)
-
-(defn emit-throw [env ctx args]
-  (if (= ctx :expr)
-    (error "throw cannot be used as an expression"))
-  (print "throw ")
-  (emit env :expr (first args))
-  (print ";"))
-
-(hash-map-set! analyze-specials 'js/throw emit-throw)
-
-(defn emit-dict [env ctx args]
-  (print-return ctx)
-  (print "{")
-  (for [[key value] (grouped args 2)]
-    (if (keyword? key)
-      (print (.stringify js/JSON (kebabcase->camelcase (keyword->string key))) ":")
-      (print (.stringify js/JSON key) ":"))
-    (emit env :expr value)
-    (print ","))
-  (print "}")
-  (print-end "}"))
-
-(hash-map-set! analyze-specials 'dict emit-dict)
+(hash-map-set! emit-specials 'js/index emit-index)

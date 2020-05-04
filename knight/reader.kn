@@ -6,6 +6,18 @@
 
 (def reader-macros (hash-map))
 
+(defn reader-pos [reader]
+  (let [line-break (regex "\r\n?|\n","g")]
+    (loop [line 1,
+           cur 0]
+      (set! (.-lastindex line-break) cur)
+      (let [match (.exec line-break (.-input reader))]
+        (if (and match (< (.-index match) (.-index reader)))
+          (recur (+ line 1)
+                 (+ (.-index match) (.-length (js/index match 0))))
+          {line: line,
+           column: (- (.-index reader) cur)})))))
+
 (defn read-char [reader]
   (let [char (js/index (.-input reader) (.-index reader))]
     (set! (.-index reader) (+ (.-index reader) 1))
@@ -141,11 +153,11 @@
     (skip-whitespace reader)
     (let [char (peek-char reader)]
       (cond
-        [(nil? char) "UNEXPECTED EOF"]
+        [(nil? char) (error (+ "Unexpected EOF, expected: " end-char))]
         [(= char end-char)
          (read-char reader)
          results]
-        [else (recur (append results (read reader)))]))))
+        [else (recur (append results (read-syntax reader)))]))))
 
 (defn read [reader]
   (skip-whitespace reader)
@@ -158,15 +170,25 @@
          (macro reader c))]
       [else (parse-token (read-token reader))])))
 
+(defn read-syntax [reader]
+  (let [start-pos (reader-pos reader),
+        form (read reader),
+        end-pos (reader-pos reader)]
+    (if (not-nil? form)
+      (meta-set! form {}));{source: (.-input reader),
+                ;  start: start-pos,
+                ;  end: end-pos}))
+    form))
+
 (defn read-many [reader]
   (loop [results (list)]
     (skip-whitespace reader)
     (if (has-more? reader)
-      (recur (append results (read reader)))
+      (recur (append results (read-syntax reader)))
       results)))
 
 (defn string->expr [str]
-  (read (make-string-reader str)))
+  (read-syntax (make-string-reader str)))
 
 (defn string->exprs [str]
   (read-many (make-string-reader str)))

@@ -1,0 +1,13 @@
+{
+  "name": "knightlang",
+  "version": "1.0.0",
+  "description": "Knight Lisp",
+  "main": "index.js",
+  "repository": "https://github.com/iBelieve/knight",
+  "author": "Michael Spencer <sonrisesoftware@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "escodegen": "^1.14.1",
+    "source-map-support": "^0.5.19"
+  }
+}
