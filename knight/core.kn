@@ -45,6 +45,17 @@
   (js/or (js/=== (js/typeof value) "number")
          (js/instanceof value js/Number)))
 
+(defn positive? [value]
+  (and (number? value)
+       (> value 0)))
+
+(defn negative? [value]
+  (and (number? value)
+       (< value 0)))
+
+(defn neg [value]
+  (* -1 value))
+
 (defn char? [value]
   (js/and (js/or (js/=== (js/typeof value) "string")
                  (js/instanceof value js/String))
@@ -234,3 +245,20 @@
 
 (defn string-repeat [str count]
   (.repeat str count))
+
+(defn string-pad-start [string width filler]
+  (.padStart string width filler))
+
+(defn string-pad-end [string width filler]
+  (.padEnd string width filler))
+
+(defn string [value]
+  (if (nil? value)
+    "nil"
+    (.toString value)))
+
+(defn max [(spread values)]
+  (.max js/Math (spread values)))
+
+(defn find-first [seq predicate]
+  (.find seq predicate))

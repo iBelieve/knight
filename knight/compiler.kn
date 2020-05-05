@@ -33,16 +33,9 @@
 (defn compiler-error [form msg]
   (if (and (meta form) (.-loc (meta form)))
     (let [loc (.-loc (meta form)),
-          line-index (- (.-line (.-start loc)) 1),
-          after-line-index (+ line-index 1),
-          before-line-index (- line-index 1),
-          lines (.split (.-source loc) \newline),
-          line (js/index lines line-index),
-          after-line (js/index lines after-line-index),
-          before-line (js/index lines before-line-index),
-          col (.-column (.-start loc)),
-          caret-line (concat (string-repeat " " col) "^")]
-      (error (+ msg "\n\n" before-line "\n" line "\n" caret-line "\n" after-line)))
+          source (.-source loc),
+          pos (.-start loc)]
+      (error (+ msg "\n\n" (marked-line source pos))))
     (error msg)))
 
 (defn make-env []
@@ -242,6 +235,13 @@
   (cond
     [(js/=== form js/undefined) (error "Undefined!")]
     [(keyword? form) (emit env (list 'string->keyword (keyword->string form)))]
+    [(negative? form)
+     {type: "UnaryExpression",
+      operator: "-",
+      prefix: true,
+      argument: {type: "Literal",
+                 value: (neg (unbox form))},
+      loc: (if (and (not-nil? form) (meta form)) (.-loc (meta form)))}]
     [else {type: "Literal",
            value: (unbox form),
            loc: (if (and (not-nil? form) (meta form)) (.-loc (meta form)))}]))
@@ -411,6 +411,8 @@
 (hash-map-set! emit-specials '< (emit-bin-op "<"))
 (hash-map-set! emit-specials '+ (emit-bin-op "+"))
 (hash-map-set! emit-specials '- (emit-bin-op "-"))
+(hash-map-set! emit-specials '* (emit-bin-op "*"))
+(hash-map-set! emit-specials '/ (emit-bin-op "/"))
 (hash-map-set! emit-specials 'mod (emit-bin-op "%"))
 (hash-map-set! emit-specials 'js/instanceof (emit-bin-op "instanceof"))
 
@@ -482,8 +484,8 @@
    declarations: (map (.from js/Array (grouped vars 2))
                       (fn [pair]
                         {type: "VariableDeclarator",
-                        id: (define-variable env (first pair)),
-                        init: (emit-expression env (second pair))})),
+                         id: (define-variable env (first pair)),
+                         init: (emit-expression env (second pair))})),
    loc: (.-loc (meta vars))})
 
 (defn emit-let [env loc args]
@@ -549,15 +551,15 @@
     {type: "ContinueStatement",
      loc: loc}
     {type: "BlockStatement",
-    body: (js/array (spread (map (zip (.-loopVariables env) args)
+     body: (js/array (spread (map (zip (.-loopVariables env) args)
                                   (fn [pair]
                                     {type: "ExpressionStatement",
-                                    expression: {type: "AssignmentExpression",
+                                     expression: {type: "AssignmentExpression",
                                                   operator: "=",
                                                   left: (emit-pattern env (first pair)),
                                                   right: (emit-expression env (second pair))}})))
                     {type: "ContinueStatement"}),
-    loc: loc}))
+     loc: loc}))
 
 (hash-map-set! emit-specials 'recur emit-recur)
 

@@ -2,29 +2,51 @@
 
 (defn make-string-reader [string]
   {input: string,
-   index: 0})
+   index: 0,
+   indent-warnings: (js/array)})
 
 (def reader-macros (hash-map))
 
-(defn reader-pos [reader]
-  (let [line-break (regex "\r\n?|\n","g")]
+(defn reader-pos [reader offset]
+  (let [line-break (regex "\r\n?|\n","g"),
+        index (if (not-nil? offset)
+                (+ (.-index reader) offset)
+                (.-index reader))]
     (loop [line 1,
            cur 0]
       (set! (.-lastindex line-break) cur)
       (let [match (.exec line-break (.-input reader))]
-        (if (and match (< (.-index match) (.-index reader)))
+        (if (and match (< (.-index match) index))
           (recur (+ line 1)
                  (+ (.-index match) (.-length (js/index match 0))))
           {line: line,
-           column: (- (.-index reader) cur)})))))
+           column: (- index cur)})))))
+
+(defn reader-indent [reader offset]
+  (.-column (reader-pos reader offset)))
+
+(defn reader-indent-warning [reader start-index end-char pos]
+  (.push (.-indentWarnings reader) {start-index: start-index, end-char: end-char, pos: pos}))
+
+(defn reader-unterminated-error [reader start-index start-pos end-char]
+  (let [warning (find-first (.-indentWarnings reader) (fn [w] (>= (.-startIndex w) start-index)))]
+    (.error js/console warning)
+    (error (+ "Unexpected EOF, expected: '" end-char "'\n\n"
+              "Started here:\n"
+              (marked-line (.-input reader) start-pos) "\n\n"
+              "Based on indent:\n"
+              (marked-line (.-input reader) (.-pos warning))))))
 
 (defn read-char [reader]
   (let [char (js/index (.-input reader) (.-index reader))]
     (set! (.-index reader) (+ (.-index reader) 1))
     char))
 
-(defn peek-char [reader]
-  (js/index (.-input reader) (.-index reader)))
+(defn peek-char [reader offset]
+  (js/index (.-input reader)
+            (if (not-nil? offset)
+                (+ (.-index reader) offset)
+                (.-index reader))))
 
 (defn has-more? [reader]
   (< (.-index reader) (.-length (.-input reader))))
@@ -148,16 +170,55 @@
 (hash-map-set! reader-macros \{ read-struct)
 (hash-map-set! reader-macros \} read-unmatched-delimiter)
 
+(defn marked-line [input pos]
+  (let [line-index (- (.-line pos) 1),
+        before-line-index (- line-index 1),
+        after-line-index (+ line-index 1),
+        lines (.split input \newline),
+        line (js/index lines line-index),
+        before-line (or (js/index lines before-line-index) ""),
+        after-line (or (js/index lines after-line-index) ""),
+        col (.-column pos),
+        caret-line (concat (string-repeat " " col) "^"),
+        line-num (string (+ line-index 1)),
+        before-line-num (string (+ before-line-index 1)),
+        after-line-num (string (+ after-line-index 1)),
+        max-line-num-width (max (.-length line-num)
+                                (.-length before-line-num)
+                                (.-length after-line-num))]
+    (+ (string-pad-start before-line-num max-line-num-width) " " before-line "\n"
+       (string-pad-start line-num max-line-num-width) " " line "\n"
+       (string-repeat " " max-line-num-width) " " caret-line "\n"
+       (string-pad-start after-line-num max-line-num-width) " " after-line)))
+
+(defn reader-error [reader pos msg]
+  (error (+ msg "\n\n" (marked-line (.-input reader) pos))))
+
 (defn read-until [reader end-char]
-  (loop [results (list)]
-    (skip-whitespace reader)
-    (let [char (peek-char reader)]
-      (cond
-        [(nil? char) (error (+ "Unexpected EOF, expected: " end-char))]
-        [(= char end-char)
-         (read-char reader)
-         results]
-        [else (recur (append results (read-syntax reader)))]))))
+  (let [has-indent-error false,
+        start-index (- (.-index reader) 1)
+        start-pos (reader-pos reader -1),
+        start-line (.-line start-pos),
+        start-indent (.-column start-pos)]
+    (loop [results (list)]
+      (if (not has-indent-error)
+        (let [last-pos (reader-pos reader)]
+          (skip-whitespace reader)
+          (let [pos (reader-pos reader),
+                line (.-line pos),
+                indent (.-column pos)]
+            (if (and (> line start-line) (<= indent start-indent))
+              (do
+                (set! has-indent-error true)
+                (reader-indent-warning reader start-index end-char last-pos))))))
+      (let [char (peek-char reader)]
+        (cond
+          [(nil? char)
+           (reader-unterminated-error reader start-index start-pos end-char)]
+          [(= char end-char)
+           (read-char reader)
+           results]
+          [else (recur (append results (read-syntax reader)))])))))
 
 (defn read [reader]
   (skip-whitespace reader)
@@ -168,6 +229,9 @@
        (let [macro (hash-map-get reader-macros c)]
          (read-char reader)
          (macro reader c))]
+      [(and (or (= c \+) (= c \-))
+            (char-digit? (peek-char reader 1)))
+       (read-number reader)]
       [else (parse-token (read-token reader))])))
 
 (defn read-syntax [reader]
