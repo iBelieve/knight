@@ -85,6 +85,9 @@
 (defn map [array func]
   (.map array func))
 
+(defn map-not-nil [seq func]
+  (filter-not-nil (map seq func)))
+
 (defn map-last [array func last-func]
   (.map array
         (fn [item index]
@@ -93,6 +96,16 @@
             (if (nil? func)
               item
               (func item))))))
+
+(defn find-first [seq predicate]
+  (.find seq predicate))
+
+(defn filter [seq predicate]
+  (.filter seq predicate))
+
+(defn filter-not-nil [seq]
+  (filter seq (fn [value] (not-nil? value))))
+
 
 (defn append [list (spread items)]
   (js/array (spread list) (spread items)))
@@ -259,6 +272,3 @@
 
 (defn max [(spread values)]
   (.max js/Math (spread values)))
-
-(defn find-first [seq predicate]
-  (.find seq predicate))

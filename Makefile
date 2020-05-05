@@ -1,4 +1,4 @@
-SRC := knight/core.kn knight/reader.kn knight/compiler.kn knight/main.kn
+SRC := knight/core.kn knight/reader.kn knight/compiler/env.kn knight/compiler.kn knight/main.kn
 
 all: knight.js
 

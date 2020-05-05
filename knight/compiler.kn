@@ -1,7 +1,5 @@
 ; -*- mode: Clojure -*-
 
-(def js-keywords (set "var" "let" "const"))
-
 (def emit-specials (hash-map))
 
 ;; Predicates
@@ -27,82 +25,6 @@
         (= type "Identifier")
         (string-suffix? type "Expression")
         (string-suffix? type "Element"))))
-
-;; Environment
-
-(defn compiler-error [form msg]
-  (if (and (meta form) (.-loc (meta form)))
-    (let [loc (.-loc (meta form)),
-          source (.-source loc),
-          pos (.-start loc)]
-      (error (+ msg "\n\n" (marked-line source pos))))
-    (error msg)))
-
-(defn make-env []
-  {variables: (hash-map),
-   is-loop: false})
-
-(defn child-env [env]
-  {variables: (hash-map-copy (.-variables env))
-   loop-variables: (if (not-nil? (.-loopVariables env))
-                     (array-copy (.-loopVariables env))),
-   is-loop: false})
-
-(defn recur-env [env]
-  {variables: (hash-map-copy (.-variables env))
-   loop-variables: (js/array),
-   is-loop: true})
-
-(defn replace-special-chars [ident]
-  (.replace (.replace (.replace (.replace ident "!" "")
-                                "->" "-to-")
-                      (regex "^((contains|has).*)\\?$") "$1")
-            (regex "^(.*)\\?$") "is-$1"))
-
-(defn kebabcase->camelcase [ident]
-  (.replace (replace-special-chars ident)
-            (regex "[-_]([a-zA-Z])" "g")
-            (fn [match p1] (.toUpperCase p1))))
-
-(defn sanitize-js-keywords [ident]
-  (if (js-keyword? ident)
-    (concat ident "$")
-    ident))
-
-(defn symbol->ident [symbol]
-  (cond
-    [(= symbol 'Symbol) "LispSymbol"]
-    [else (sanitize-js-keywords (kebabcase->camelcase (symbol->string symbol)))]))
-
-(defn define-variable [env symbol]
-  (let [variables (.-variables env)]
-    (if (not (contains-key? variables symbol))
-      (hash-map-set! variables symbol (symbol->ident symbol)))
-    (if (.-isLoop env)
-      (.push (.-loopVariables env) symbol))
-    (resolve-var env symbol)))
-
-(defn define-function [env symbol]
-  (let [variables (.-variables env)]
-    (if (not (contains-key? variables symbol))
-      (hash-map-set! variables symbol (symbol->ident symbol)))
-    (resolve-var env symbol)))
-
-(defn resolve-var [env symbol]
-  (let [variables (.-variables env),
-        string (symbol->string symbol),
-        loc (if (meta symbol) (.-loc (meta symbol)))]
-    (if (string-prefix? string "js/")
-      {type: "Identifier",
-       name: (.substring string 3),
-       originalName: string,
-       loc: loc}
-      (if (not (contains-key? variables symbol))
-        (compiler-error symbol (+ "Symbol not found: " string))
-        {type: "Identifier",
-         name: (hash-map-get variables symbol),
-         originalName: (symbol->string symbol),
-         loc: loc}))))
 
 ;; AST Transformation
 
@@ -158,8 +80,8 @@
 ;; AST Generation of specific types
 
 (defn emit-return-last [env forms]
-  (map-last forms (fn [form] (emit-statement env form))
-                  (fn [form] (emit-return-statement env form))))
+  (filter-not-nil (map-last forms (fn [form] (emit-statement env form))
+                                  (fn [form] (emit-return-statement env form)))))
 
 (defn emit-return-block [env forms]
   {type: "BlockStatement",
@@ -174,24 +96,27 @@
       (statement->return node))))
 
 (defn emit-statements [env forms]
-  (map forms (fn [form] (emit-statement env form))))
+  (map-not-nil forms (fn [form] (emit-statement env form))))
 
 (defn emit-statement [env form]
   (let [node (emit env form)]
-    (if (expression? node)
-      {type: "ExpressionStatement",
-       expression: node,
-       loc: (.-loc node)}
-      node)))
+    (cond
+      [(nil? node) node]
+      [(expression? node)
+       {type: "ExpressionStatement",
+        expression: node,
+        loc: (.-loc node)}]
+      [else node])))
 
 (defn emit-expressions [env forms]
-  (map forms (fn [form] (emit-expression env form))))
+  (map-not-nil forms (fn [form] (emit-expression env form))))
 
 (defn emit-expression [env form]
   (let [node (emit env form)]
-    (if (expression? node)
-      node
-      (statement->expression node))))
+    (cond
+      [(nil? node) node]
+      [(expression? node) node]
+      [else (statement->expression node)])))
 
 (defn emit-patterns [env forms]
   (map forms (fn [form] (emit-pattern env form))))
@@ -218,12 +143,11 @@
 ;; AST Generation
 
 (defn emit-module [forms]
-  (let [env (make-env)]
-    (for [form forms]
-      (if (tagged-list? form 'defn)
-        (define-variable env (second form))))
+  (let [env (make-env),
+        nodes (emit-statements env forms),
+        function-nodes (.-functionNodes env)]
     {type: "Program",
-     body: (emit-statements env forms)}))
+     body: (js/array (spread (.values function-nodes)) (spread nodes))}))
 
 (defn emit [env form]
   (cond
@@ -291,7 +215,8 @@
    loc: loc})
 
 (defn emit-defn [env loc args]
-  (let [ident (define-function env (first args))
+  (let [name (first args)
+        ident (symbol->ident name)
         params (second args)
         rest (skip2 args)
         docs (if (and (string? (first rest))
@@ -299,16 +224,19 @@
                  (first rest))
         body (if docs (skip1 rest) rest)
         func-env (child-env env)]
-    {type: "FunctionDeclaration",
-     id: ident,
-     params: (emit-patterns func-env params),
-     body: (emit-return-block func-env body),
-     loc: loc}))
+    (define-function env name {name: name,
+                               ident: ident,
+                               params: params,
+                               docs: docs,
+                               body: body,
+                               loc: loc,
+                               generator: false})))
 
 (hash-map-set! emit-specials 'defn emit-defn)
 
 (defn emit-defgen [env loc args]
-  (let [ident (define-function env (first args))
+  (let [name (first args)
+        ident (symbol->ident name)
         params (second args)
         rest (skip2 args)
         docs (if (and (string? (first rest))
@@ -316,21 +244,15 @@
                  (first rest))
         body (if docs (skip1 rest) rest)
         func-env (child-env env)]
-    {type: "FunctionDeclaration",
-     id: ident,
-     params: (emit-patterns func-env params),
-     body: (emit-return-block func-env body),
-     generator: true,
-     loc: loc}))
+    (define-function env name {name: name,
+                               ident: ident,
+                               params: params,
+                               docs: docs,
+                               body: body,
+                               loc: loc,
+                               generator: true})))
 
 (hash-map-set! emit-specials 'defgen emit-defgen)
-
-(defn emit-return [env loc args]
-  {type: "ReturnStatement",
-   argument: (if (not-empty? args) (emit-expression env (first args))),
-   loc: loc})
-
-(hash-map-set! emit-specials 'return emit-return)
 
 (defn emit-set [env loc args]
   (let [setter (first args)
@@ -499,18 +421,16 @@
 (hash-map-set! emit-specials 'let emit-let)
 
 (defn emit-cond [env loc args]
-  (defn emit-branch [args]
-    (let [expr (first args),
-          rest (skip1 args),
-          test (first expr),
-          body (skip1 expr)]
-      (if (= test 'else)
-        (emit-block env body)
-        {type: "IfStatement",
-         test: (emit-expression env test),
-         consequent: (emit-block env body),
-         alternate: (if (not-empty? rest) (emit-branch rest))})))
-  (emit-branch args))
+  (let [expr (first args),
+        rest (skip1 args),
+        test (first expr),
+        body (skip1 expr)]
+    (if (= test 'else)
+      (emit-block env body)
+      {type: "IfStatement",
+       test: (emit-expression env test),
+       consequent: (emit-block env body),
+       alternate: (if (not-empty? rest) (emit-cond env loc rest))})))
 
 (hash-map-set! emit-specials 'cond emit-cond)
 

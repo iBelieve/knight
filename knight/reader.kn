@@ -160,16 +160,6 @@
         d (read-char reader)]
     (.fromCharCode js/String (js/parseInt (+ a b c d)))))
 
-(hash-map-set! reader-macros \' read-quote)
-(hash-map-set! reader-macros \\ read-character)
-(hash-map-set! reader-macros \" read-string)
-(hash-map-set! reader-macros \( read-list)
-(hash-map-set! reader-macros \) read-unmatched-delimiter)
-(hash-map-set! reader-macros \[ read-array)
-(hash-map-set! reader-macros \] read-unmatched-delimiter)
-(hash-map-set! reader-macros \{ read-struct)
-(hash-map-set! reader-macros \} read-unmatched-delimiter)
-
 (defn marked-line [input pos]
   (let [line-index (- (.-line pos) 1),
         before-line-index (- line-index 1),
@@ -256,3 +246,13 @@
 
 (defn string->exprs [str]
   (read-many (make-string-reader str)))
+
+(hash-map-set! reader-macros \' read-quote)
+(hash-map-set! reader-macros \\ read-character)
+(hash-map-set! reader-macros \" read-string)
+(hash-map-set! reader-macros \( read-list)
+(hash-map-set! reader-macros \) read-unmatched-delimiter)
+(hash-map-set! reader-macros \[ read-array)
+(hash-map-set! reader-macros \] read-unmatched-delimiter)
+(hash-map-set! reader-macros \{ read-struct)
+(hash-map-set! reader-macros \} read-unmatched-delimiter)
