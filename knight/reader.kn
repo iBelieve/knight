@@ -3,27 +3,15 @@
 (defn make-string-reader [string]
   {input: string,
    index: 0,
+   line: 1,
+   column: 0,
    indent-warnings: (js/array)})
 
 (def reader-macros (hash-map))
 
-(defn reader-pos [reader offset]
-  (let [line-break (regex "\r\n?|\n","g"),
-        index (if (not-nil? offset)
-                (+ (.-index reader) offset)
-                (.-index reader))]
-    (loop [line 1,
-           cur 0]
-      (set! (.-lastindex line-break) cur)
-      (let [match (.exec line-break (.-input reader))]
-        (if (and match (< (.-index match) index))
-          (recur (+ line 1)
-                 (+ (.-index match) (.-length (js/index match 0))))
-          {line: line,
-           column: (- index cur)})))))
-
-(defn reader-indent [reader offset]
-  (.-column (reader-pos reader offset)))
+(defn reader-pos [reader]
+  {line: (.-line reader),
+   column: (.-column reader)})
 
 (defn reader-indent-warning [reader start-index end-char pos]
   (.push (.-indentWarnings reader) {start-index: start-index, end-char: end-char, pos: pos}))
@@ -40,6 +28,11 @@
 (defn read-char [reader]
   (let [char (js/index (.-input reader) (.-index reader))]
     (set! (.-index reader) (+ (.-index reader) 1))
+    (if (= char \newline)
+      (do
+        (set! (.-line reader) (+ (.-line reader) 1))
+        (set! (.-column reader) 0))
+      (set! (.-column reader) (+ (.-column reader) 1)))
     char))
 
 (defn peek-char [reader offset]
@@ -67,13 +60,20 @@
 (defn take-until [reader predicate]
   (let [start-index (.-index reader)
         input-length (.-length (.-input reader))]
-    (loop [index (.-index reader)]
-      (if (or (>= index input-length)
-              (predicate (js/index (.-input reader) index)))
-        (do
-          (set! (.-index reader) index)
-          (.substring (.-input reader) start-index index))
-        (recur (+ index 1))))))
+    (loop [index (.-index reader),
+           line (.-line reader),
+           column (.-column reader)]
+      (let [char (js/index (.-input reader) index)]
+        (if (or (>= index input-length)
+                (predicate char))
+          (do
+            (set! (.-index reader) index)
+            (set! (.-line reader) line)
+            (set! (.-column reader) column)
+            (.substring (.-input reader) start-index index))
+          (if (= char \newline)
+            (recur (+ index 1) (+ line 1) 0)
+            (recur (+ index 1) line (+ column 1))))))))
 
 (defn take-while [reader predicate]
   (take-until reader (fn [char] (not (predicate char)))))
@@ -118,14 +118,14 @@
 (defn read-quote [reader]
   (list 'quote (read reader)))
 
-(defn read-list [reader first-char]
-  (read-until reader \)))
+(defn read-list [reader first-char pos]
+  (read-until reader \) pos))
 
-(defn read-array [reader first-char]
-  (read-until reader \]))
+(defn read-array [reader first-char pos]
+  (read-until reader \] pos))
 
-(defn read-struct [reader first-char]
-  (list 'dict (spread (read-until reader \}))))
+(defn read-struct [reader first-char pos]
+  (list 'dict (spread (read-until reader \} pos))))
 
 (defn read-unmatched-delimiter [reader first-char]
   (error (concat "Unmatched delimiter: " first-char)))
@@ -184,10 +184,9 @@
 (defn reader-error [reader pos msg]
   (error (+ msg "\n\n" (marked-line (.-input reader) pos))))
 
-(defn read-until [reader end-char]
+(defn read-until [reader end-char start-pos]
   (let [has-indent-error false,
-        start-index (- (.-index reader) 1)
-        start-pos (reader-pos reader -1),
+        start-index (- (.-index reader) 1),
         start-line (.-line start-pos),
         start-indent (.-column start-pos)]
     (loop [results (list)]
@@ -210,7 +209,7 @@
            results]
           [else (recur (append results (read-syntax reader)))])))))
 
-(defn read [reader]
+(defn read [reader pos]
   (skip-whitespace reader)
   (let [c (peek-char reader)]
     (cond
@@ -218,7 +217,7 @@
       [(char-macro? c)
        (let [macro (hash-map-get reader-macros c)]
          (read-char reader)
-         (macro reader c))]
+         (macro reader c pos))]
       [(and (or (= c \+) (= c \-))
             (char-digit? (peek-char reader 1)))
        (read-number reader)]
@@ -226,7 +225,7 @@
 
 (defn read-syntax [reader]
   (let [start-pos (reader-pos reader),
-        form (read reader),
+        form (read reader start-pos),
         end-pos (reader-pos reader)]
     (if (not-nil? form)
       (meta-set! form {loc: {source: (.-input reader),
