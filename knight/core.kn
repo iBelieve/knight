@@ -132,11 +132,11 @@
 ;   (js/parseInt string))
 
 (defn println [&args]
-  (.log js/console &args))
+  (.log js/console &(map args string)))
 
 (defn print [&args]
   (for [arg args]
-    (.write (.-stdout js/process) arg)))
+    (.write (.-stdout js/process) (string arg))))
 
 (defn hash-map []
   (js/new js/Map))
@@ -215,6 +215,8 @@
 (defn repr [value]
   (cond
     [(nil? value) "nil"]
+    [(symbol? value) (symbol->string value)]
+    [(list? value) (+ "(" (string-join (map value repr) " ") ")")]
     [else (.stringify js/JSON value)]))
 
 (defgen grouped [seq count]
@@ -266,9 +268,12 @@
   (.padEnd string width filler))
 
 (defn string [value]
-  (if (nil? value)
-    "nil"
-    (.toString value)))
+  (cond
+    [(nil? value) "nil"]
+    [(string? value) value]
+    [(number? value) (.toString value)]
+    [(bool? value) (.toString value)]
+    [else (repr value)]))
 
 (defn max [&values]
   (.max js/Math &values))
