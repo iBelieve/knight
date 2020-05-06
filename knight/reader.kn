@@ -1,5 +1,16 @@
 ; -*- mode: Clojure -*-
 
+(defn self-evaluating? [form]
+  (or (bool? form) (number? form) (string? form) (keyword? form)))
+
+(defn expand-syntax-quote [form]
+  (cond
+    [(self-evaluating? form) form]
+    [(symbol? form) (list 'quote form)]
+    [(tagged-list? form 'unquote) (second form)]
+    [(list? form) (list 'list &(map form expand-syntax-quote))]
+    [else (list 'quote form)]))
+
 (defn make-string-reader [string]
   {input: string,
    index: 0,
@@ -115,8 +126,17 @@
       [(= (.-length char) 1) char]
       [else (error (+ "Unrecognized char: '" char "'"))])))
 
-(defn read-quote [reader]
-  (list 'quote (read reader)))
+(defn read-quote [reader first-char pos]
+  (list 'quote (read-syntax reader)))
+
+(defn read-syntax-quote [reader first-char pos]
+  (expand-syntax-quote (read-syntax reader)))
+
+(defn read-spread [reader first-char pos]
+  (list 'spread (read-syntax reader)))
+
+(defn read-unquote [reader first-char pos]
+  (list 'unquote (read-syntax reader)))
 
 (defn read-list [reader first-char pos]
   (read-until reader \) pos))
@@ -125,12 +145,12 @@
   (read-until reader \] pos))
 
 (defn read-struct [reader first-char pos]
-  (list 'dict (spread (read-until reader \} pos))))
+  (list 'dict &(read-until reader \} pos)))
 
 (defn read-unmatched-delimiter [reader first-char]
   (error (concat "Unmatched delimiter: " first-char)))
 
-(defn read-string [reader first-char]
+(defn read-string [reader first-char pos]
   (loop [string ""]
     (let [part (take-until reader (fn [ch] (or (= ch \")
                                                (= ch \\))))
@@ -247,6 +267,9 @@
   (read-many (make-string-reader str)))
 
 (hash-map-set! reader-macros \' read-quote)
+(hash-map-set! reader-macros \` read-syntax-quote)
+(hash-map-set! reader-macros \& read-spread)
+(hash-map-set! reader-macros \~ read-unquote)
 (hash-map-set! reader-macros \\ read-character)
 (hash-map-set! reader-macros \" read-string)
 (hash-map-set! reader-macros \( read-list)

@@ -79,8 +79,8 @@
   (and (not-nil? value)
        (> (.-length value) 0)))
 
-(defn list [(spread items)]
-  (js/array (spread items)))
+(defn list [&items]
+  (js/array &items))
 
 (defn map [array func]
   (.map array func))
@@ -107,8 +107,8 @@
   (filter seq (fn [value] (not-nil? value))))
 
 
-(defn append [list (spread items)]
-  (js/array (spread list) (spread items)))
+(defn append [list &items]
+  (js/array &list &items))
 
 (defn concat [a b]
   (+ a b))
@@ -131,10 +131,10 @@
 ; (defn parse-int [string]
 ;   (js/parseInt string))
 
-(defn println [(spread args)]
-  (.log js/console (spread args)))
+(defn println [&args]
+  (.log js/console &args))
 
-(defn print [(spread args)]
+(defn print [&args]
   (for [arg args]
     (.write (.-stdout js/process) arg)))
 
@@ -224,12 +224,12 @@
         (yield (.slice seq i (+ i count)))
         (recur (+ i count))))))
 
-(defn zip [(spread arrays)]
+(defn zip [&arrays]
   (map (first arrays)
        (fn [_ index]
          (map arrays (fn [array] (js/index array index))))))
 
-(defn set [(spread values)]
+(defn set [&values]
   (js/new js/Set values))
 
 (defn set-contains? [set value]
@@ -270,5 +270,5 @@
     "nil"
     (.toString value)))
 
-(defn max [(spread values)]
-  (.max js/Math (spread values)))
+(defn max [&values]
+  (.max js/Math &values))

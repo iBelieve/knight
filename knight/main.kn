@@ -13,6 +13,7 @@
 (.parse program (.-argv js/process))
 
 (let [output-filename (.-output program),
+      output-dirname (if output-filename (.dirname path output-filename)),
       source-map-filename (if (.-map program) (if output-filename (+ (.basename path output-filename) ".map") "inline")),
       code (.readFileSync fs 0 "utf-8"),
       forms (string->exprs code),
@@ -28,5 +29,5 @@
       (do
         (.writeFileSync fs output-filename (.-code minified))
         (if (and source-map-filename (!= source-map-filename "inline"))
-          (.writeFileSync fs source-map-filename (.toString (.-map minified)))))
+          (.writeFileSync fs (.join path output-dirname source-map-filename) (.toString (.-map minified)))))
       (println (.-code minified)))))

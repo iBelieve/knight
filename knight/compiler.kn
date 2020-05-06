@@ -147,7 +147,7 @@
         nodes (emit-statements env forms),
         function-nodes (.-functionNodes env)]
     {type: "Program",
-     body: (js/array (spread (.values function-nodes)) (spread nodes))}))
+     body: (js/array &(.values function-nodes) &nodes)}))
 
 (defn emit [env form]
   (cond
@@ -415,7 +415,7 @@
         body (skip1 args)
         let-env (child-env env)]
     {type: "BlockStatement",
-     body: (js/array (emit-vars let-env vars) (spread (emit-statements let-env body))),
+     body: (js/array (emit-vars let-env vars) &(emit-statements let-env body)),
      loc: loc}))
 
 (hash-map-set! emit-specials 'let emit-let)
@@ -471,13 +471,13 @@
     {type: "ContinueStatement",
      loc: loc}
     {type: "BlockStatement",
-     body: (js/array (spread (map (zip (.-loopVariables env) args)
-                                  (fn [pair]
-                                    {type: "ExpressionStatement",
-                                     expression: {type: "AssignmentExpression",
-                                                  operator: "=",
-                                                  left: (emit-pattern env (first pair)),
-                                                  right: (emit-expression env (second pair))}})))
+     body: (js/array &(map (zip (.-loopVariables env) args)
+                           (fn [pair]
+                             {type: "ExpressionStatement",
+                              expression: {type: "AssignmentExpression",
+                                           operator: "=",
+                                           left: (emit-pattern env (first pair)),
+                                           right: (emit-expression env (second pair))}}))
                     {type: "ContinueStatement"}),
      loc: loc}))
 
@@ -501,7 +501,7 @@
 (defn knight-quote [form]
   (cond
     [(symbol? form) (list 'string->symbol (symbol->string form))]
-    [(list? form) (append (list 'js/array) (map knight-quote form))]
+    [(list? form) (list 'js/array &(map form knight-quote))]
     [else form]))
 
 (hash-map-set! emit-specials 'quote emit-quote)
