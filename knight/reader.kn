@@ -37,7 +37,7 @@
               (marked-line (.-input reader) (.-pos warning))))))
 
 (defn read-char [reader]
-  (let [char (js/index (.-input reader) (.-index reader))]
+  (let [char (nth (.-input reader) (.-index reader))]
     (set! (.-index reader) (+ (.-index reader) 1))
     (if (= char \newline)
       (do
@@ -47,10 +47,10 @@
     char))
 
 (defn peek-char [reader offset]
-  (js/index (.-input reader)
-            (if (not-nil? offset)
-                (+ (.-index reader) offset)
-                (.-index reader))))
+  (nth (.-input reader)
+       (if (not-nil? offset)
+         (+ (.-index reader) offset)
+         (.-index reader))))
 
 (defn has-more? [reader]
   (< (.-index reader) (.-length (.-input reader))))
@@ -74,7 +74,7 @@
     (loop [index (.-index reader),
            line (.-line reader),
            column (.-column reader)]
-      (let [char (js/index (.-input reader) index)]
+      (let [char (nth (.-input reader) index)]
         (if (or (>= index input-length)
                 (predicate char))
           (do
@@ -185,9 +185,9 @@
         before-line-index (- line-index 1),
         after-line-index (+ line-index 1),
         lines (.split input \newline),
-        line (js/index lines line-index),
-        before-line (or (js/index lines before-line-index) ""),
-        after-line (or (js/index lines after-line-index) ""),
+        line (nth lines line-index),
+        before-line (or (nth lines before-line-index) ""),
+        after-line (or (nth lines after-line-index) ""),
         col (.-column pos),
         caret-line (concat (string-repeat " " col) "^"),
         line-num (string (+ line-index 1)),

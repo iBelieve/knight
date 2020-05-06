@@ -267,7 +267,7 @@
         args (skip1 setter)]
     (cond
       [(field-access? callee) (emit-set-field env loc callee args value)]
-      [(= callee 'js/index) (emit-set-index env loc args value)]
+      [(= callee 'nth) (emit-set-index env loc args value)]
       [else (error (concat "Invalid setter: " (repr setter)))])))
 
 (defn emit-set-var [env loc symbol value]
@@ -538,4 +538,4 @@
      property: (emit-expression env index),
      computed: true}))
 
-(hash-map-set! emit-specials 'js/index emit-index)
+(hash-map-set! emit-specials 'nth emit-index)

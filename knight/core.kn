@@ -181,16 +181,16 @@
     (hash-map-get interned-keywords substring)))
 
 (defn first [list]
-  (js/index list 0))
+  (nth list 0))
 
 (defn second [list]
-  (js/index list 1))
+  (nth list 1))
 
 (defn third [list]
-  (js/index list 2))
+  (nth list 2))
 
 (defn fourth [list]
-  (js/index list 3))
+  (nth list 3))
 
 (defn skip1 [list]
   (.slice list 1))
@@ -200,7 +200,7 @@
 
 (defn split-last [seq]
   (js/array (.slice seq 0 (- (.-length seq) 1))
-            (js/index seq (- (.-length seq) 1))))
+            (nth seq (- (.-length seq) 1))))
 
 (defn regex [str flags]
   (js/new js/RegExp str flags))
@@ -229,7 +229,7 @@
 (defn zip [&arrays]
   (map (first arrays)
        (fn [_ index]
-         (map arrays (fn [array] (js/index array index))))))
+         (map arrays (fn [array] (nth array index))))))
 
 (defn set [&values]
   (js/new js/Set values))
@@ -252,10 +252,10 @@
 (def symbol-meta (js/Symbol "meta"))
 
 (defn meta [value]
-  (js/index value symbol-meta))
+  (nth value symbol-meta))
 
 (defn meta-set! [value meta]
-  (set! (js/index value symbol-meta) meta)
+  (set! (nth value symbol-meta) meta)
   (js/return))
 
 (defn string-repeat [str count]
