@@ -19,15 +19,12 @@
       forms (string->exprs code),
       ast (emit-module forms),
       output (.generate escodegen ast {sourceMap: "stdin", sourceMapWithCode: true, sourceContent: code}),
-      source-map (.toString (.-map output)),
-      minified (.minify terser (.-code output) {toplevel: true,
-                                                sourceMap: (if source-map-filename
-                                                             {content: source-map, url: source-map-filename})})]
-  (if (.-error minified)
-    (.error js/console (.-error minified))
+      source-map (.toString (.-map output))]
+  (if (.-error output)
+    (.error js/console (.-error output))
     (if output-filename
       (do
-        (.writeFileSync fs output-filename (.-code minified))
+        (.writeFileSync fs output-filename (.-code output))
         (if (and source-map-filename (!= source-map-filename "inline"))
-          (.writeFileSync fs (.join path output-dirname source-map-filename) (.toString (.-map minified)))))
-      (println (.-code minified)))))
+          (.writeFileSync fs (.join path output-dirname source-map-filename) (.toString (.-map output)))))
+      (println (.-code output)))))

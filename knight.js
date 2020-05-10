@@ -1,2 +1,1500 @@
-function n(){return new Map}function t(n,t,e){return n.set(t,e)}function e(...n){return[...n]}function r(n){return o(u(Ln,n))&&t(Ln,n,new i(n)),c(Ln,n)}function o(n){return!1===n||null==n}function u(n,t){return n.has(t)}function i(n){this.name=n}function c(n,t){return n.get(t)}function l(n){{let e=a(n),i=function(n,e){f(n);{let l=m(n);if(g(l))return b(n);if(v(l)){let t=c($n,l);return x(n),t(n,l,e)}return"+"!==l&&"-"!==l||!g(m(n,1))?"nil"===(i=h(n))?null:"true"===i||"false"!==i&&(E(i,":")||w(i,":")?function(n){{let e=E(n,":")?n.substring(1):w(n,":")?n.substring(0,n.length-1):n;return o(u(Rn,e))&&t(Rn,e,new j(e)),c(Rn,e)}}(i):r(i)):b(n)}var i}(n,e),l=a(n);return y(i)&&function(n,t){n[Dn]=t}(i,{loc:{source:n.input,start:e,end:l}}),i}}function a(n){return{line:n.line,column:n.column}}function f(n){for(;;){if(s(n,n=>d(n)),";"!==m(n))return;p(n,n=>"\n"===n)}}function s(n,t){return p(n,n=>o(t(n)))}function p(n,t){{let e=n.index,r=n.input.length;{let o=n.index,u=n.line,i=n.column;for(;;){let c=n.input[o];if(o>=r||t(c))return n.index=o,n.line=u,n.column=i,n.input.substring(e,o);if("\n"===c){o+=1,u+=1,i=0;continue}o+=1,u=u,i+=1;continue}}}}function d(n){return" "===n||"\t"===n||"\n"===n||","===n}function m(n,t){return n.input[y(t)?n.index+t:n.index]}function y(n){return null!=n}function g(n){return n>="0"&&n<="9"}function b(n){{let t=h(n);return function(n,t){return n.includes(t)}(t,".")?parseFloat(t):parseInt(t)}}function h(n){return S(x(n),p(n,n=>d(n)||v(n)))}function S(n,t){return n+t}function x(n){{let t=n.input[n.index];return n.index=n.index+1,"\n"===t?(n.line=n.line+1,n.column=0):n.column=n.column+1,t}}function v(n){return u($n,n)}function E(n,t){return n.startsWith(t)}function w(n,t){return n.endsWith(t)}function j(n){this.name=n}function I(n){return function(n){return q(n)||N(n)||k(n)||A(n)}(n)?n:F(n)?e(r("quote"),n):B(n,r("unquote"))?M(n):C(n)?e(r("list"),...U(n,I)):e(r("quote"),n)}function q(n){return"boolean"==typeof n||n instanceof Boolean}function N(n){return"number"==typeof n||n instanceof Number}function k(n){return"string"==typeof n||n instanceof String}function A(n){return n instanceof j}function F(n){return n instanceof i}function B(n,t){return C(n)&&V(n)===t}function C(n){return Array.isArray(n)}function V(n){return n[0]}function M(n){return n[1]}function U(n,t){return n.map(t)}function W(n){throw new Error(n)}function O(n){return null==n}function L(n){{let t=x(n),e=x(n),r=x(n),o=x(n);return String.fromCharCode(parseInt(t+e+r+o))}}function R(n,t,r){{let u=!1,i=n.index-1,c=r.line,s=r.column;{let p=e();for(;;){if(o(u)){let e=a(n);f(n);{let r=a(n),o=r.line,l=r.column;o>c&&l<=s&&(u=!0,D(n,i,t,e))}}{let e=m(n);if(O(e))return $(n,i,r,t);if(e===t)return x(n),p;p=Z(p,l(n));continue}}}}}function D(n,t,e,r){return n.indentWarnings.push({startIndex:t,endChar:e,pos:r})}function $(n,t,e,r){{let i=(o=n.indentWarnings,u=n=>n.startIndex>=t,o.find(u));return console.error(i),W("Unexpected EOF, expected: '"+r+"'\n\nStarted here:\n"+z(n.input,e)+"\n\nBased on indent:\n"+z(n.input,i.pos))}var o,u}function z(n,t){{let e=t.line-1,r=e-1,o=e+1,u=n.split("\n"),i=u[e],c=u[r]||"",l=u[o]||"",a=S(P(" ",t.column),"^"),f=J(e+1),s=J(r+1),p=J(o+1),d=function(...n){return Math.max(...n)}(f.length,s.length,p.length);return Y(s,d)+" "+c+"\n"+Y(f,d)+" "+i+"\n"+P(" ",d)+" "+a+"\n"+Y(p,d)+" "+l}}function P(n,t){return n.repeat(t)}function J(n){return O(n)?"nil":k(n)?n:N(n)||q(n)?n.toString():T(n)}function T(n){return O(n)?"nil":F(n)?G(n):C(n)?"("+function(n,t){return n.join(t)}(U(n,T)," ")+")":JSON.stringify(n)}function G(n){return n.name}function Y(n,t,e){return n.padStart(t,e)}function Z(n,...t){return[...n,...t]}function _(n,t){return W(S("Unmatched delimiter: ",t))}function H(n){return n===r("Symbol")?"LispSymbol":function(n){return function(n,t){return n.has(t)}(zn,n)}(t=K(G(n)))?S(t,"$"):t;var t}function K(n){return function(n){return n.replace("!","").replace("->","-to-").replace(Q("^((contains|has).*)\\?$"),"$1").replace(Q("^(.*)\\?$"),"is-$1")}(n).replace(Q("[-_]([a-zA-Z])","g"),(n,t)=>t.toUpperCase())}function Q(n,t){return new RegExp(n,t)}function X(n){return n.slice(2)}function nn(n){return y(n)&&n.length>0}function tn(n){return n.slice(1)}function en(n){return{variables:rn(n.variables),loopVariables:n.loopVariables,functions:n.functions,functionNodes:n.functionNodes,isLoop:!1}}function rn(n){return new Map(n)}function on(n,e,r){{let o=n.functions;return u(o,e)?W("Function already defined: "+G(e)):t(o,e,r),null}}function un(n,e){{let i=n.variables,l=n.functions,a=n.functionNodes,f=G(e),s=cn(e)?cn(e).loc:void 0;return E(f,"js/")?{type:"Identifier",name:f.substring(3),originalName:f,loc:s}:u(i,e)?{type:"Identifier",name:c(i,e),originalName:f,loc:s}:u(l,e)?(o(u(a,e))&&function(n,e){{let o=en(n);t(n.functionNodes,e.name,r("placeholder")),t(n.functionNodes,e.name,{type:"FunctionDeclaration",id:{type:"Identifier",name:e.ident,originalName:G(e.name),loc:cn(e.name).loc},params:ln(o,e.params),body:pn(o,e.body),generator:e.generator,loc:e.loc})}}(n,c(l,e)),{type:"Identifier",name:c(l,e).ident,originalName:f,loc:s}):sn(e,"Variable or function not found: "+f+" - "+U(Array.from(i.keys()),G)+" - "+U(Array.from(l.keys()),G))}}function cn(n){return n[Dn]}function ln(n,t){return U(t,t=>an(n,t))}function an(n,t){return F(t)?fn(n,t):B(t,r("spread"))?{type:"RestElement",argument:fn(n,M(t)),loc:cn(t).loc}:C(t)?{type:"ArrayPattern",elements:ln(n,t)}:sn(t,"Unrecognized pattern")}function fn(n,e){{let r=n.variables;return o(u(r,e))&&t(r,e,H(e)),n.isLoop&&n.loopVariables.push(e),un(n,e)}}function sn(n,t){if(cn(n)&&cn(n).loc){let e=cn(n).loc;return W(t+"\n\n"+z(e.source,e.start))}return W(t)}function pn(n,t){return{type:"BlockStatement",body:dn(n,t)}}function dn(n,t){return mn(yn(t,t=>gn(n,t),t=>function(n,t){{let e=bn(n,t);return xn(e)?{type:"ReturnStatement",argument:e,loc:e.loc}:vn(e)}}(n,t)))}function mn(n){return function(n,t){return n.filter(t)}(n,n=>y(n))}function yn(n,t,e){return n.map((r,o)=>o===n.length-1?e(r):O(t)?r:t(r))}function gn(n,t){{let e=bn(n,t);return O(e)?e:xn(e)?{type:"ExpressionStatement",expression:e,loc:e.loc}:e}}function bn(n,t){return F(t)?function(n,t){return un(n,t)}(n,t):C(t)?function(n,t){{let e=cn(t)?cn(t).loc:void 0,r=V(t),o=tn(t);return hn(r)?function(n,t,e,r){{let o=G(e).substring(2),u=V(r);return{type:"MemberExpression",object:Sn(n,u),property:{type:"Identifier",name:o,loc:cn(e).loc},computed:!1,loc:t}}}(n,e,r,o):function(n){return F(n)&&E(G(n),".")}(r)?function(n,t,e,r){{let o=G(e).substring(1),u=V(r),i=tn(r);return{type:"CallExpression",callee:{type:"MemberExpression",object:Sn(n,u),property:{type:"Identifier",name:o,loc:cn(e).loc},computed:!1},arguments:jn(n,i),loc:t}}}(n,e,r,o):function(n){return F(n)&&u(Pn,n)}(r)?c(Pn,r)(n,e,o):function(n,t,e,r){return{type:"CallExpression",callee:Sn(n,e),arguments:jn(n,r),loc:t}}(n,e,r,o)}}(n,t):qn(n,t)}function hn(n){return F(n)&&E(G(n),".-")}function Sn(n,t){{let e=bn(n,t);return O(e)||xn(e)?e:function(n){return function(n){return{type:"CallExpression",callee:{type:"ArrowFunctionExpression",id:null,params:[],body:{type:"BlockStatement",body:[vn(n)],loc:n.loc}},arguments:[]}}(n)}(e)}}function xn(n){{let t=n.type;return"Literal"===t||"Identifier"===t||w(t,"Expression")||w(t,"Element")}}function vn(n){{let t=n.type;return"ReturnStatement"===t||"ForOfStatement"===t||"ContinueStatement"===t||"ThrowStatement"===t?n:"ExpressionStatement"===t?{type:"ReturnStatement",argument:n.expression,loc:n.loc}:"BlockStatement"===t?{type:"BlockStatement",body:En(n.body),loc:n.loc}:"WhileStatement"===t?{type:"WhileStatement",test:n.test,body:vn(n.body),loc:n.loc}:"IfStatement"===t?{type:"IfStatement",test:n.test,consequent:vn(n.consequent),alternate:n.alternate?vn(n.alternate):null,loc:n.loc}:W(S("Unsupported return statement: ",t))}}function En(n){return wn(n)?[{type:"ReturnStatement",argument:null}]:yn(n,null,vn)}function wn(n){return 0===n.length}function jn(n,t){return In(t,t=>Sn(n,t))}function In(n,t){return mn(U(n,t))}function qn(n,t){return void 0===t?W("Undefined!"):A(t)?bn(n,e(r("string->keyword"),Nn(t))):N(o=t)&&o<0?{type:"UnaryExpression",operator:"-",prefix:!0,argument:{type:"Literal",value:kn(An(t))},loc:y(t)&&cn(t)?cn(t).loc:void 0}:{type:"Literal",value:An(t),loc:y(t)&&cn(t)?cn(t).loc:void 0};var o}function Nn(n){return n.name}function kn(n){return-1*n}function An(n){return y(n)?n.valueOf():null}function Fn(n){return(t,e,r)=>(wn(r)&&W("Empty operator expression"),jn(t,r).reduce((t,r)=>({type:"BinaryExpression",operator:n,left:t,right:r,loc:e})))}function Bn(n,t){return function(n){return C(n)&&1===n.length}(t)?gn(n,V(t)):{type:"BlockStatement",body:Cn(n,t)}}function Cn(n,t){return In(t,t=>gn(n,t))}function Vn(n,t){return{type:"VariableDeclaration",kind:"let",declarations:U(Array.from(Mn(t,2)),t=>({type:"VariableDeclarator",id:fn(n,V(t)),init:Sn(n,M(t))})),loc:cn(t).loc}}function*Mn(n,t){{let e=0;for(;;){if(!(e<n.length))return;yield n.slice(e,e+t),e+=t}}}function Un(...n){return U(V(n),(t,e)=>U(n,n=>n[e]))}function Wn(n){return F(n)?e(r("string->symbol"),G(n)):C(n)?e(r("js/array"),...U(n,Wn)):n}function On(n){return n.index<n.input.length}let Ln=n(),Rn=n(),Dn=Symbol("meta"),$n=n();t($n,"'",(function(n,t,o){return e(r("quote"),l(n))})),t($n,"`",(function(n,t,e){return I(l(n))})),t($n,"&",(function(n,t,o){return e(r("spread"),l(n))})),t($n,"~",(function(n,t,o){return e(r("unquote"),l(n))})),t($n,"\\",(function(n){{let t=h(n);return"newline"===t?"\n":"return"===t?"\r":"tab"===t?"\t":"space"===t?" ":1===t.length?t:W("Unrecognized char: '"+t+"'")}})),t($n,'"',(function(n,t,e){{let t="";for(;;){let e=S(t,p(n,n=>'"'===n||"\\"===n)),r=x(n);if(O(r))return W("Unexpected EOF while reading string");if('"'===r)return e;if("\\"===r){let r=x(n),o=O(r)?W("Unexpected EOF while reading character escape"):'"'===r||"\\"===r||"/"===r?r:"n"===r?"\n":"t"===r?"\t":"r"===r?"\r":"u"===r?L(n):S(W("Unrecognized character escape"));t=S(e,o);continue}}}})),t($n,"(",(function(n,t,e){return R(n,")",e)})),t($n,")",_),t($n,"[",(function(n,t,e){return R(n,"]",e)})),t($n,"]",_),t($n,"{",(function(n,t,o){return e(r("dict"),...R(n,"}",o))})),t($n,"}",_);let zn=function(...n){return new Set(n)}("var","let","const"),Pn=n();t(Pn,r("defn"),(function(n,t,e){{let r=V(e),o=H(r),u=M(e),i=X(e),c=k(V(i))&&nn(tn(i))?V(i):void 0,l=c?tn(i):i;en(n);return on(n,r,{name:r,ident:o,params:u,docs:c,body:l,loc:t,generator:!1})}})),t(Pn,r("defgen"),(function(n,t,e){{let r=V(e),o=H(r),u=M(e),i=X(e),c=k(V(i))&&nn(tn(i))?V(i):void 0,l=c?tn(i):i;en(n);return on(n,r,{name:r,ident:o,params:u,docs:c,body:l,loc:t,generator:!0})}})),t(Pn,r("set!"),(function(n,t,e){{let o=V(e),u=M(e);return F(o)?function(n,t,e,r){return{type:"AssignmentExpression",operator:"=",left:un(n,e),right:Sn(n,r),loc:t}}(n,t,o,u):C(o)?function(n,t,e,o){{let u=V(e),i=tn(e);return hn(u)?function(n,t,e,r,o){{let u=G(e).substring(2),i=V(r);return{type:"AssignmentExpression",operator:"=",left:{type:"MemberExpression",object:Sn(n,i),property:{type:"Identifier",name:u,loc:cn(e).loc},computed:!1},right:Sn(n,o),loc:t}}}(n,t,u,i,o):u===r("nth")?function(n,t,e,r){{let o=V(e),u=M(e);return{type:"AssignmentExpression",operator:"=",left:{type:"MemberExpression",object:Sn(n,o),property:Sn(n,u),computed:!0},right:Sn(n,r),loc:t}}}(n,t,i,o):W(S("Invalid setter: ",T(e)))}}(n,t,o,u):W(S("Invalid setter: ",T(o)))}})),t(Pn,r("and"),Fn("&&")),t(Pn,r("or"),Fn("||")),t(Pn,r("js/and"),Fn("&&")),t(Pn,r("js/or"),Fn("||")),t(Pn,r("js/==="),Fn("===")),t(Pn,r("js/!=="),Fn("!==")),t(Pn,r("js/=="),Fn("==")),t(Pn,r("js/!="),Fn("!=")),t(Pn,r("="),Fn("===")),t(Pn,r("!="),Fn("!==")),t(Pn,r(">="),Fn(">=")),t(Pn,r("<="),Fn("<=")),t(Pn,r(">"),Fn(">")),t(Pn,r("<"),Fn("<")),t(Pn,r("+"),Fn("+")),t(Pn,r("-"),Fn("-")),t(Pn,r("*"),Fn("*")),t(Pn,r("/"),Fn("/")),t(Pn,r("mod"),Fn("%")),t(Pn,r("js/instanceof"),Fn("instanceof")),t(Pn,r("spread"),(function(n,t,e){return{type:"SpreadElement",argument:Sn(n,V(e)),loc:t}})),t(Pn,r("js/array"),(function(n,t,e){return{type:"ArrayExpression",elements:jn(n,e),loc:t}})),t(Pn,r("fn"),(function(n,t,e){{let r=V(e),o=tn(e),u=en(n);return{type:"ArrowFunctionExpression",id:null,params:ln(u,r),body:pn(u,o),loc:t}}})),t(Pn,r("if"),(function(n,t,e){{let r=V(e),o=M(e),u=X(e);return{type:"IfStatement",test:Sn(n,r),consequent:gn(n,o),alternate:y(u)?Bn(n,u):void 0,loc:t}}})),t(Pn,r("for"),(function(n,t,e){{let r=V(V(e)),o=M(V(e)),u=tn(e),i=en(n);return{type:"ForOfStatement",left:an(i,r),right:Sn(i,o),body:Bn(i,u),loc:t}}})),t(Pn,r("def"),(function(n,t,e){return{type:"VariableDeclaration",kind:"let",declarations:[{type:"VariableDeclarator",id:fn(n,V(e)),init:Sn(n,M(e)),loc:t}],loc:t}})),t(Pn,r("let"),(function(n,t,e){{let r=V(e),o=tn(e),u=en(n);return{type:"BlockStatement",body:[Vn(u,r),...Cn(u,o)],loc:t}}})),t(Pn,r("cond"),(function n(t,e,o){{let u=V(o),i=tn(o),c=V(u),l=tn(u);return c===r("else")?Bn(t,l):{type:"IfStatement",test:Sn(t,c),consequent:Bn(t,l),alternate:nn(i)?n(t,e,i):void 0}}})),t(Pn,r("loop"),(function(n,t,e){{let t=V(e),r=tn(e),o=function(n){return{variables:rn(n.variables),loopVariables:[],functions:n.functions,functionNodes:n.functionNodes,isLoop:!0}}(n);return wn(t)?{type:"WhileStatement",test:qn(o,!0),body:pn(o,r)}:{type:"BlockStatement",body:[Vn(o,t),{type:"WhileStatement",test:qn(o,!0),body:pn(o,r)}]}}})),t(Pn,r("do"),(function(n,t,e){return{type:"BlockStatement",body:Cn(n,e),loc:t}})),t(Pn,r("yield"),(function(n,t,e){return{type:"YieldExpression",argument:Sn(n,V(e)),loc:t}})),t(Pn,r("recur"),(function(n,t,e){return n.loopVariables.length!==e.length&&W("Recur with not enough args"+n.loopVariables.length+e.length),wn(e)?{type:"ContinueStatement",loc:t}:{type:"BlockStatement",body:[...U(Un(n.loopVariables,e),t=>({type:"ExpressionStatement",expression:{type:"AssignmentExpression",operator:"=",left:an(n,V(t)),right:Sn(n,M(t))}})),{type:"ContinueStatement"}],loc:t}})),t(Pn,r("dict"),(function(n,t,e){return{type:"ObjectExpression",properties:U(Array.from(Mn(e,2)),t=>({type:"Property",key:A(V(t))?qn(n,K(Nn(V(t)))):qn(n,V(t)),value:Sn(n,M(t))}))}})),t(Pn,r("quote"),(function(n,t,e){return bn(n,Wn(V(e)))})),t(Pn,r("js/return"),(function(n,t,e){return{type:"ReturnStatement",argument:nn(e)?Sn(n,V(e)):null,loc:t}})),t(Pn,r("js/throw"),(function(n,t,e){return{type:"ThrowStatement",argument:Sn(n,V(e)),loc:t}})),t(Pn,r("js/new"),(function(n,t,e){return{type:"NewExpression",callee:Sn(n,V(e)),arguments:jn(n,tn(e)),loc:t}})),t(Pn,r("nth"),(function(n,t,e){{let t=V(e),r=M(e);return{type:"MemberExpression",object:Sn(n,t),property:Sn(n,r),computed:!0}}})),require("source-map-support/register");let Jn=require("fs"),Tn=require("path"),Gn=require("escodegen"),Yn=require("terser"),Zn=require("commander").program;Zn.option("-o, --output <filename>","Output JS filename"),Zn.option("-m, --map","Generate source maps"),Zn.parse(process.argv);{let t=Zn.output,r=t?Tn.dirname(t):void 0,o=Zn.map?t?Tn.basename(t)+".map":"inline":void 0,u=Jn.readFileSync(0,"utf-8"),i=function(t){{let e={functions:n(),functionNodes:n(),variables:n(),isLoop:!1},r=Cn(e,t);return{type:"Program",body:[...e.functionNodes.values(),...r]}}}(function(n){{let t=e();for(;;){if(f(n),!On(n))return t;t=Z(t,l(n))}}}(function(n){return{input:n,index:0,line:1,column:0,indentWarnings:[]}}(u))),c=Gn.generate(i,{sourceMap:"stdin",sourceMapWithCode:!0,sourceContent:u}),a=c.map.toString(),s=Yn.minify(c.code,{toplevel:!0,sourceMap:o?{content:a,url:o}:void 0});s.error?console.error(s.error):t?(Jn.writeFileSync(t,s.code),o&&"inline"!==o&&Jn.writeFileSync(Tn.join(r,o),s.map.toString())):function(...n){console.log(...U(n,J))}(s.code)}
-//# sourceMappingURL=knight.js.map
+function hashMap() {
+    return new Map();
+}
+function hashMapSet(map, key, value) {
+    return map.set(key, value);
+}
+function readQuote(reader, firstChar, pos) {
+    return list(stringToSymbol('quote'), readSyntax(reader));
+}
+function list(...items) {
+    return [...items];
+}
+function stringToSymbol(string) {
+    if (not(containsKey(internedSymbols, string)))
+        hashMapSet(internedSymbols, string, new LispSymbol(string));
+    else {
+    }
+    return hashMapGet(internedSymbols, string);
+}
+function not(value) {
+    return value === false || value == null;
+}
+function containsKey(map, key) {
+    return map.has(key);
+}
+function LispSymbol(name) {
+    this.name = name;
+    return;
+}
+function hashMapGet(map, key) {
+    return map.get(key);
+}
+function readSyntax(reader) {
+    {
+        let startPos = readerPos(reader), form = read(reader, startPos), endPos = readerPos(reader);
+        if (isNotNil(form))
+            metaSet(form, {
+                'loc': {
+                    'source': reader.input,
+                    'start': startPos,
+                    'end': endPos
+                }
+            });
+        else {
+        }
+        return form;
+    }
+}
+function readerPos(reader) {
+    return {
+        'line': reader.line,
+        'column': reader.column
+    };
+}
+function read(reader, pos) {
+    skipWhitespace(reader);
+    {
+        let c = peekChar(reader);
+        if (isCharDigit(c))
+            return readNumber(reader);
+        else if (isCharMacro(c)) {
+            let macro = hashMapGet(readerMacros, c);
+            readChar(reader);
+            return macro(reader, c, pos);
+        } else if ((c === '+' || c === '-') && isCharDigit(peekChar(reader, 1)))
+            return readNumber(reader);
+        else
+            return parseToken(readToken(reader));
+    }
+}
+function skipWhitespace(reader) {
+    while (true) {
+        takeWhile(reader, char => {
+            return isCharWhitespace(char);
+        });
+        if (peekChar(reader) === ';') {
+            takeUntil(reader, c => {
+                return c === '\n';
+            });
+            continue;
+        } else {
+            return;
+        }
+    }
+}
+function takeWhile(reader, predicate) {
+    return takeUntil(reader, char => {
+        return not(predicate(char));
+    });
+}
+function takeUntil(reader, predicate) {
+    {
+        let startIndex = reader.index, inputLength = reader.input.length;
+        {
+            let index = reader.index, line = reader.line, column = reader.column;
+            while (true) {
+                {
+                    let char = reader.input[index];
+                    if (index >= inputLength || predicate(char)) {
+                        reader.index = index;
+                        reader.line = line;
+                        reader.column = column;
+                        return reader.input.substring(startIndex, index);
+                    } else if (char === '\n') {
+                        index = index + 1;
+                        line = line + 1;
+                        column = 0;
+                        continue;
+                    } else {
+                        index = index + 1;
+                        line = line;
+                        column = column + 1;
+                        continue;
+                    }
+                }
+            }
+        }
+    }
+}
+function isCharWhitespace(char) {
+    return char === ' ' || char === '\t' || char === '\n' || char === ',';
+}
+function peekChar(reader, offset) {
+    return reader.input[(() => {
+        if (isNotNil(offset))
+            return reader.index + offset;
+        else
+            return reader.index;
+    })()];
+}
+function isNotNil(value) {
+    return value != null;
+}
+function isCharDigit(char) {
+    return char >= '0' && char <= '9';
+}
+function readNumber(reader) {
+    {
+        let string = readToken(reader);
+        if (isStringContains(string, '.'))
+            return parseFloat(string);
+        else
+            return parseInt(string);
+    }
+}
+function readToken(reader) {
+    return concat(readChar(reader), takeUntil(reader, c => {
+        return isCharWhitespace(c) || isCharMacro(c);
+    }));
+}
+function concat(a, b) {
+    return a + b;
+}
+function readChar(reader) {
+    {
+        let char = reader.input[reader.index];
+        reader.index = reader.index + 1;
+        if (char === '\n') {
+            reader.line = reader.line + 1;
+            reader.column = 0;
+        } else
+            reader.column = reader.column + 1;
+        return char;
+    }
+}
+function isCharMacro(char) {
+    return containsKey(readerMacros, char);
+}
+function isStringContains(string, substring) {
+    return string.includes(substring);
+}
+function parseToken(token) {
+    if (token === 'nil')
+        return null;
+    else if (token === 'true')
+        return true;
+    else if (token === 'false')
+        return false;
+    else if (isStringPrefix(token, ':') || isStringSuffix(token, ':'))
+        return stringToKeyword(token);
+    else
+        return stringToSymbol(token);
+}
+function isStringPrefix(string, prefix) {
+    return string.startsWith(prefix);
+}
+function isStringSuffix(string, prefix) {
+    return string.endsWith(prefix);
+}
+function stringToKeyword(string) {
+    {
+        let substring = (() => {
+            if (isStringPrefix(string, ':'))
+                return string.substring(1);
+            else if (isStringSuffix(string, ':'))
+                return string.substring(0, string.length - 1);
+            else
+                return string;
+        })();
+        if (not(containsKey(internedKeywords, substring)))
+            hashMapSet(internedKeywords, substring, new Keyword(substring));
+        else {
+        }
+        return hashMapGet(internedKeywords, substring);
+    }
+}
+function Keyword(name) {
+    this.name = name;
+    return;
+}
+function metaSet(value, meta) {
+    value[symbolMeta] = meta;
+    return;
+}
+function readSyntaxQuote(reader, firstChar, pos) {
+    return expandSyntaxQuote(readSyntax(reader));
+}
+function expandSyntaxQuote(form) {
+    if (isSelfEvaluating(form))
+        return form;
+    else if (isSymbol(form))
+        return list(stringToSymbol('quote'), form);
+    else if (isTaggedList(form, stringToSymbol('unquote')))
+        return second(form);
+    else if (isList(form))
+        return list(stringToSymbol('list'), ...map(form, expandSyntaxQuote));
+    else
+        return list(stringToSymbol('quote'), form);
+}
+function isSelfEvaluating(form) {
+    return isBool(form) || isNumber(form) || isString(form) || isKeyword(form);
+}
+function isBool(value) {
+    return typeof(value) === 'boolean' || value instanceof Boolean;
+}
+function isNumber(value) {
+    return typeof(value) === 'number' || value instanceof Number;
+}
+function isString(value) {
+    return typeof(value) === 'string' || value instanceof String;
+}
+function isKeyword(value) {
+    return value instanceof Keyword;
+}
+function isSymbol(value) {
+    return value instanceof LispSymbol;
+}
+function isTaggedList(value, tag) {
+    return isList(value) && first(value) === tag;
+}
+function isList(value) {
+    return Array.isArray(value);
+}
+function first(list) {
+    return list[0];
+}
+function second(list) {
+    return list[1];
+}
+function map(array, func) {
+    return array.map(func);
+}
+function readSpread(reader, firstChar, pos) {
+    return list(stringToSymbol('spread'), readSyntax(reader));
+}
+function readUnquote(reader, firstChar, pos) {
+    return list(stringToSymbol('unquote'), readSyntax(reader));
+}
+function readCharacter(reader) {
+    {
+        let char = readToken(reader);
+        if (char === 'newline')
+            return '\n';
+        else if (char === 'return')
+            return '\r';
+        else if (char === 'tab')
+            return '\t';
+        else if (char === 'space')
+            return ' ';
+        else if (char.length === 1)
+            return char;
+        else
+            return error('Unrecognized char: \'' + char + '\'');
+    }
+}
+function error(msg) {
+    throw new Error(msg);
+}
+function readString(reader, firstChar, pos) {
+    {
+        let string = '';
+        while (true) {
+            {
+                let part = takeUntil(reader, ch => {
+                        return ch === '"' || ch === '\\';
+                    }), string2 = concat(string, part), char = readChar(reader);
+                if (isNil(char))
+                    return error('Unexpected EOF while reading string');
+                else if (char === '"')
+                    return string2;
+                else if (char === '\\') {
+                    let char = readChar(reader), escapedChar = (() => {
+                            if (isNil(char))
+                                return error('Unexpected EOF while reading character escape');
+                            else if (char === '"')
+                                return char;
+                            else if (char === '\\')
+                                return char;
+                            else if (char === '/')
+                                return char;
+                            else if (char === 'n')
+                                return '\n';
+                            else if (char === 't')
+                                return '\t';
+                            else if (char === 'r')
+                                return '\r';
+                            else if (char === 'u')
+                                return readUnicodeChar(reader);
+                            else
+                                return concat(error('Unrecognized character escape', char));
+                        })();
+                    {
+                        string = concat(string2, escapedChar);
+                        continue;
+                    }
+                }
+            }
+        }
+    }
+}
+function isNil(value) {
+    return value == null;
+}
+function readUnicodeChar(reader) {
+    {
+        let a = readChar(reader), b = readChar(reader), c = readChar(reader), d = readChar(reader);
+        return String.fromCharCode(parseInt(a + b + c + d));
+    }
+}
+function readList(reader, firstChar, pos) {
+    return readUntil(reader, ')', pos);
+}
+function readUntil(reader, endChar, startPos) {
+    {
+        let hasIndentError = false, startIndex = reader.index - 1, startLine = startPos.line, startIndent = startPos.column;
+        {
+            let results = list();
+            while (true) {
+                if (not(hasIndentError)) {
+                    let lastPos = readerPos(reader);
+                    skipWhitespace(reader);
+                    {
+                        let pos = readerPos(reader), line = pos.line, indent = pos.column;
+                        if (line > startLine && indent <= startIndent) {
+                            hasIndentError = true;
+                            readerIndentWarning(reader, startIndex, endChar, lastPos);
+                        } else {
+                        }
+                    }
+                } else {
+                }
+                {
+                    let char = peekChar(reader);
+                    if (isNil(char))
+                        return readerUnterminatedError(reader, startIndex, startPos, endChar);
+                    else if (char === endChar) {
+                        readChar(reader);
+                        return results;
+                    } else {
+                        results = append(results, readSyntax(reader));
+                        continue;
+                    }
+                }
+            }
+        }
+    }
+}
+function readerIndentWarning(reader, startIndex, endChar, pos) {
+    return reader.indentWarnings.push({
+        'startIndex': startIndex,
+        'endChar': endChar,
+        'pos': pos
+    });
+}
+function readerUnterminatedError(reader, startIndex, startPos, endChar) {
+    {
+        let warning = findFirst(reader.indentWarnings, w => {
+            return w.startIndex >= startIndex;
+        });
+        console.error(warning);
+        return error('Unexpected EOF, expected: \'' + endChar + '\'\n\n' + 'Started here:\n' + markedLine(reader.input, startPos) + '\n\n' + 'Based on indent:\n' + markedLine(reader.input, warning.pos));
+    }
+}
+function findFirst(seq, predicate) {
+    return seq.find(predicate);
+}
+function markedLine(input, pos) {
+    {
+        let lineIndex = pos.line - 1, beforeLineIndex = lineIndex - 1, afterLineIndex = lineIndex + 1, lines = input.split('\n'), line = lines[lineIndex], beforeLine = lines[beforeLineIndex] || '', afterLine = lines[afterLineIndex] || '', col = pos.column, caretLine = concat(stringRepeat(' ', col), '^'), lineNum = string(lineIndex + 1), beforeLineNum = string(beforeLineIndex + 1), afterLineNum = string(afterLineIndex + 1), maxLineNumWidth = max(lineNum.length, beforeLineNum.length, afterLineNum.length);
+        return stringPadStart(beforeLineNum, maxLineNumWidth) + ' ' + beforeLine + '\n' + stringPadStart(lineNum, maxLineNumWidth) + ' ' + line + '\n' + stringRepeat(' ', maxLineNumWidth) + ' ' + caretLine + '\n' + stringPadStart(afterLineNum, maxLineNumWidth) + ' ' + afterLine;
+    }
+}
+function stringRepeat(str, count) {
+    return str.repeat(count);
+}
+function string(value) {
+    if (isNil(value))
+        return 'nil';
+    else if (isString(value))
+        return value;
+    else if (isNumber(value))
+        return value.toString();
+    else if (isBool(value))
+        return value.toString();
+    else
+        return repr(value);
+}
+function repr(value) {
+    if (isNil(value))
+        return 'nil';
+    else if (isSymbol(value))
+        return symbolToString(value);
+    else if (isList(value))
+        return '(' + stringJoin(map(value, repr), ' ') + ')';
+    else
+        return JSON.stringify(value);
+}
+function symbolToString(symbol) {
+    return symbol.name;
+}
+function stringJoin(string, sep) {
+    return string.join(sep);
+}
+function max(...values) {
+    return Math.max(...values);
+}
+function stringPadStart(string, width, filler) {
+    return string.padStart(width, filler);
+}
+function append(list, ...items) {
+    return [
+        ...list,
+        ...items
+    ];
+}
+function readUnmatchedDelimiter(reader, firstChar) {
+    return error(concat('Unmatched delimiter: ', firstChar));
+}
+function readArray(reader, firstChar, pos) {
+    return readUntil(reader, ']', pos);
+}
+function readStruct(reader, firstChar, pos) {
+    return list(stringToSymbol('dict'), ...readUntil(reader, '}', pos));
+}
+function set(...values) {
+    return new Set(values);
+}
+function emitDefn(env, loc, args) {
+    {
+        let name = first(args), ident = symbolToIdent(name), params = second(args), rest = skip2(args), docs = (() => {
+                if (isString(first(rest)) && isNotEmpty(skip1(rest)))
+                    return first(rest);
+                else {
+                    return;
+                }
+            })(), body = (() => {
+                if (docs)
+                    return skip1(rest);
+                else
+                    return rest;
+            })(), funcEnv = childEnv(env);
+        return defineFunction(env, name, {
+            'name': name,
+            'ident': ident,
+            'params': params,
+            'docs': docs,
+            'body': body,
+            'loc': loc,
+            'generator': false
+        });
+    }
+}
+function symbolToIdent(symbol) {
+    if (symbol === stringToSymbol('Symbol'))
+        return 'LispSymbol';
+    else
+        return sanitizeJsKeywords(kebabcaseToCamelcase(symbolToString(symbol)));
+}
+function sanitizeJsKeywords(ident) {
+    if (isJsKeyword(ident))
+        return concat(ident, '$');
+    else
+        return ident;
+}
+function isJsKeyword(ident) {
+    return isSetContains(jsKeywords, ident);
+}
+function isSetContains(set, value) {
+    return set.has(value);
+}
+function kebabcaseToCamelcase(ident) {
+    return replaceSpecialChars(ident).replace(regex('[-_]([a-zA-Z])', 'g'), (match, p1) => {
+        return p1.toUpperCase();
+    });
+}
+function replaceSpecialChars(ident) {
+    return ident.replace('!', '').replace('->', '-to-').replace(regex('^((contains|has).*)\\?$'), '$1').replace(regex('^(.*)\\?$'), 'is-$1');
+}
+function regex(str, flags) {
+    return new RegExp(str, flags);
+}
+function skip2(list) {
+    return list.slice(2);
+}
+function isNotEmpty(value) {
+    return isNotNil(value) && value.length > 0;
+}
+function skip1(list) {
+    return list.slice(1);
+}
+function childEnv(env) {
+    return {
+        'variables': hashMapCopy(env.variables),
+        'loopVariables': env.loopVariables,
+        'functions': env.functions,
+        'functionNodes': env.functionNodes,
+        'isLoop': false
+    };
+}
+function hashMapCopy(map) {
+    return new Map(map);
+}
+function defineFunction(env, name, func) {
+    {
+        let functions = env.functions;
+        if (containsKey(functions, name))
+            error('Function already defined: ' + symbolToString(name));
+        else
+            hashMapSet(functions, name, func);
+        return null;
+    }
+}
+function emitDefgen(env, loc, args) {
+    {
+        let name = first(args), ident = symbolToIdent(name), params = second(args), rest = skip2(args), docs = (() => {
+                if (isString(first(rest)) && isNotEmpty(skip1(rest)))
+                    return first(rest);
+                else {
+                    return;
+                }
+            })(), body = (() => {
+                if (docs)
+                    return skip1(rest);
+                else
+                    return rest;
+            })(), funcEnv = childEnv(env);
+        return defineFunction(env, name, {
+            'name': name,
+            'ident': ident,
+            'params': params,
+            'docs': docs,
+            'body': body,
+            'loc': loc,
+            'generator': true
+        });
+    }
+}
+function emitSet(env, loc, args) {
+    {
+        let setter = first(args), value = second(args);
+        if (isSymbol(setter))
+            return emitSetVar(env, loc, setter, value);
+        else if (isList(setter))
+            return emitSetter(env, loc, setter, value);
+        else
+            return error(concat('Invalid setter: ', repr(setter)));
+    }
+}
+function emitSetVar(env, loc, symbol, value) {
+    return {
+        'type': 'AssignmentExpression',
+        'operator': '=',
+        'left': resolveVar(env, symbol),
+        'right': emitExpression(env, value),
+        'loc': loc
+    };
+}
+function resolveVar(env, symbol) {
+    {
+        let variables = env.variables, functions = env.functions, functionNodes = env.functionNodes, string = symbolToString(symbol), loc = (() => {
+                if (meta(symbol))
+                    return meta(symbol).loc;
+                else {
+                    return;
+                }
+            })();
+        if (isStringPrefix(string, 'js/'))
+            return {
+                'type': 'Identifier',
+                'name': string.substring(3),
+                'originalName': string,
+                'loc': loc
+            };
+        else if (containsKey(variables, symbol))
+            return {
+                'type': 'Identifier',
+                'name': hashMapGet(variables, symbol),
+                'originalName': string,
+                'loc': loc
+            };
+        else if (containsKey(functions, symbol)) {
+            if (not(containsKey(functionNodes, symbol)))
+                compileFunction(env, hashMapGet(functions, symbol));
+            else {
+            }
+            return {
+                'type': 'Identifier',
+                'name': hashMapGet(functions, symbol).ident,
+                'originalName': string,
+                'loc': loc
+            };
+        } else
+            return compilerError(symbol, 'Variable or function not found: ' + string + ' - ' + map(Array.from(variables.keys()), symbolToString) + ' - ' + map(Array.from(functions.keys()), symbolToString));
+    }
+}
+function meta(value) {
+    return value[symbolMeta];
+}
+function compileFunction(env, func) {
+    {
+        let funcEnv = childEnv(env);
+        hashMapSet(env.functionNodes, func.name, stringToSymbol('placeholder'));
+        return hashMapSet(env.functionNodes, func.name, {
+            'type': 'FunctionDeclaration',
+            'id': {
+                'type': 'Identifier',
+                'name': func.ident,
+                'originalName': symbolToString(func.name),
+                'loc': meta(func.name).loc
+            },
+            'params': emitPatterns(funcEnv, func.params),
+            'body': emitReturnBlock(funcEnv, func.body),
+            'generator': func.generator,
+            'loc': func.loc
+        });
+    }
+}
+function emitPatterns(env, forms) {
+    return map(forms, form => {
+        return emitPattern(env, form);
+    });
+}
+function emitPattern(env, form) {
+    if (isSymbol(form))
+        return defineVariable(env, form);
+    else if (isTaggedList(form, stringToSymbol('spread')))
+        return {
+            'type': 'RestElement',
+            'argument': defineVariable(env, second(form)),
+            'loc': meta(form).loc
+        };
+    else if (isList(form))
+        return {
+            'type': 'ArrayPattern',
+            'elements': emitPatterns(env, form)
+        };
+    else
+        return compilerError(form, 'Unrecognized pattern');
+}
+function defineVariable(env, symbol) {
+    {
+        let variables = env.variables;
+        if (not(containsKey(variables, symbol)))
+            hashMapSet(variables, symbol, symbolToIdent(symbol));
+        else {
+        }
+        if (env.isLoop)
+            env.loopVariables.push(symbol);
+        else {
+        }
+        return resolveVar(env, symbol);
+    }
+}
+function compilerError(form, msg) {
+    if (meta(form) && meta(form).loc) {
+        let loc = meta(form).loc, source = loc.source, pos = loc.start;
+        return error(msg + '\n\n' + markedLine(source, pos));
+    } else
+        return error(msg);
+}
+function emitReturnBlock(env, forms) {
+    return {
+        'type': 'BlockStatement',
+        'body': emitReturnLast(env, forms)
+    };
+}
+function emitReturnLast(env, forms) {
+    return filterNotNil(mapLast(forms, form => {
+        return emitStatement(env, form);
+    }, form => {
+        return emitReturnStatement(env, form);
+    }));
+}
+function filterNotNil(seq) {
+    return filter(seq, value => {
+        return isNotNil(value);
+    });
+}
+function filter(seq, predicate) {
+    return seq.filter(predicate);
+}
+function mapLast(array, func, lastFunc) {
+    return array.map((item, index) => {
+        if (index === array.length - 1)
+            return lastFunc(item);
+        else if (isNil(func))
+            return item;
+        else
+            return func(item);
+    });
+}
+function emitStatement(env, form) {
+    {
+        let node = emit(env, form);
+        if (isNil(node))
+            return node;
+        else if (isExpression(node))
+            return {
+                'type': 'ExpressionStatement',
+                'expression': node,
+                'loc': node.loc
+            };
+        else
+            return node;
+    }
+}
+function emit(env, form) {
+    if (isSymbol(form))
+        return emitVar(env, form);
+    else if (isList(form))
+        return emitList(env, form);
+    else
+        return emitLiteral(env, form);
+}
+function emitVar(env, symbol) {
+    return resolveVar(env, symbol);
+}
+function emitList(env, form) {
+    {
+        let loc = (() => {
+                if (meta(form))
+                    return meta(form).loc;
+                else {
+                    return;
+                }
+            })(), callee = first(form), args = skip1(form);
+        if (isFieldAccess(callee))
+            return emitField(env, loc, callee, args);
+        else if (isMethodCall(callee))
+            return emitMethodcall(env, loc, callee, args);
+        else if (isSpecial(callee))
+            return hashMapGet(emitSpecials, callee)(env, loc, args);
+        else
+            return emitFuncall(env, loc, callee, args);
+    }
+}
+function isFieldAccess(form) {
+    return isSymbol(form) && isStringPrefix(symbolToString(form), '.-');
+}
+function emitField(env, loc, callee, args) {
+    {
+        let fieldName = symbolToString(callee).substring(2), obj = first(args);
+        return {
+            'type': 'MemberExpression',
+            'object': emitExpression(env, obj),
+            'property': {
+                'type': 'Identifier',
+                'name': fieldName,
+                'loc': meta(callee).loc
+            },
+            'computed': false,
+            'loc': loc
+        };
+    }
+}
+function emitExpression(env, form) {
+    {
+        let node = emit(env, form);
+        if (isNil(node))
+            return node;
+        else if (isExpression(node))
+            return node;
+        else
+            return statementToExpression(node);
+    }
+}
+function isExpression(node) {
+    {
+        let type = node.type;
+        return type === 'Literal' || type === 'Identifier' || isStringSuffix(type, 'Expression') || isStringSuffix(type, 'Element');
+    }
+}
+function statementToExpression(node) {
+    return statementToIife(node);
+}
+function statementToIife(node) {
+    return {
+        'type': 'CallExpression',
+        'callee': {
+            'type': 'ArrowFunctionExpression',
+            'id': null,
+            'params': [],
+            'body': {
+                'type': 'BlockStatement',
+                'body': [statementToReturn(node)],
+                'loc': node.loc
+            }
+        },
+        'arguments': []
+    };
+}
+function statementToReturn(node) {
+    {
+        let type = node.type;
+        if (type === 'ReturnStatement')
+            return node;
+        else if (type === 'ForOfStatement')
+            return node;
+        else if (type === 'ContinueStatement')
+            return node;
+        else if (type === 'ThrowStatement')
+            return node;
+        else if (type === 'ExpressionStatement')
+            return {
+                'type': 'ReturnStatement',
+                'argument': node.expression,
+                'loc': node.loc
+            };
+        else if (type === 'BlockStatement')
+            return {
+                'type': 'BlockStatement',
+                'body': statementsToReturn(node.body),
+                'loc': node.loc
+            };
+        else if (type === 'WhileStatement')
+            return {
+                'type': 'WhileStatement',
+                'test': node.test,
+                'body': statementToReturn(node.body),
+                'loc': node.loc
+            };
+        else if (type === 'IfStatement')
+            return {
+                'type': 'IfStatement',
+                'test': node.test,
+                'consequent': statementToReturn(node.consequent),
+                'alternate': (() => {
+                    if (node.alternate)
+                        return statementToReturn(node.alternate);
+                    else
+                        return null;
+                })(),
+                'loc': node.loc
+            };
+        else
+            return error(concat('Unsupported return statement: ', type));
+    }
+}
+function statementsToReturn(nodes) {
+    if (isEmpty(nodes))
+        return [{
+                'type': 'ReturnStatement',
+                'argument': null
+            }];
+    else
+        return mapLast(nodes, null, statementToReturn);
+}
+function isEmpty(value) {
+    return value.length === 0;
+}
+function isMethodCall(form) {
+    return isSymbol(form) && isStringPrefix(symbolToString(form), '.');
+}
+function emitMethodcall(env, loc, callee, args) {
+    {
+        let methodName = symbolToString(callee).substring(1), obj = first(args), methodArgs = skip1(args);
+        return {
+            'type': 'CallExpression',
+            'callee': {
+                'type': 'MemberExpression',
+                'object': emitExpression(env, obj),
+                'property': {
+                    'type': 'Identifier',
+                    'name': methodName,
+                    'loc': meta(callee).loc
+                },
+                'computed': false
+            },
+            'arguments': emitExpressions(env, methodArgs),
+            'loc': loc
+        };
+    }
+}
+function emitExpressions(env, forms) {
+    return mapNotNil(forms, form => {
+        return emitExpression(env, form);
+    });
+}
+function mapNotNil(seq, func) {
+    return filterNotNil(map(seq, func));
+}
+function isSpecial(form) {
+    return isSymbol(form) && containsKey(emitSpecials, form);
+}
+function emitFuncall(env, loc, callee, args) {
+    return {
+        'type': 'CallExpression',
+        'callee': emitExpression(env, callee),
+        'arguments': emitExpressions(env, args),
+        'loc': loc
+    };
+}
+function emitLiteral(env, form) {
+    if (form === undefined)
+        return error('Undefined!');
+    else if (isKeyword(form))
+        return emit(env, list(stringToSymbol('string->keyword'), keywordToString(form)));
+    else if (isNegative(form))
+        return {
+            'type': 'UnaryExpression',
+            'operator': '-',
+            'prefix': true,
+            'argument': {
+                'type': 'Literal',
+                'value': neg(unbox(form))
+            },
+            'loc': (() => {
+                if (isNotNil(form) && meta(form))
+                    return meta(form).loc;
+                else {
+                    return;
+                }
+            })()
+        };
+    else
+        return {
+            'type': 'Literal',
+            'value': unbox(form),
+            'loc': (() => {
+                if (isNotNil(form) && meta(form))
+                    return meta(form).loc;
+                else {
+                    return;
+                }
+            })()
+        };
+}
+function keywordToString(keyword) {
+    return keyword.name;
+}
+function isNegative(value) {
+    return isNumber(value) && value < 0;
+}
+function neg(value) {
+    return -1 * value;
+}
+function unbox(value) {
+    if (isNotNil(value))
+        return value.valueOf();
+    else
+        return null;
+}
+function emitReturnStatement(env, form) {
+    {
+        let node = emit(env, form);
+        if (isExpression(node))
+            return {
+                'type': 'ReturnStatement',
+                'argument': node,
+                'loc': node.loc
+            };
+        else
+            return statementToReturn(node);
+    }
+}
+function emitSetter(env, loc, setter, value) {
+    {
+        let callee = first(setter), args = skip1(setter);
+        if (isFieldAccess(callee))
+            return emitSetField(env, loc, callee, args, value);
+        else if (callee === stringToSymbol('nth'))
+            return emitSetIndex(env, loc, args, value);
+        else
+            return error(concat('Invalid setter: ', repr(setter)));
+    }
+}
+function emitSetField(env, loc, symbol, args, value) {
+    {
+        let fieldName = symbolToString(symbol).substring(2), obj = first(args);
+        return {
+            'type': 'AssignmentExpression',
+            'operator': '=',
+            'left': {
+                'type': 'MemberExpression',
+                'object': emitExpression(env, obj),
+                'property': {
+                    'type': 'Identifier',
+                    'name': fieldName,
+                    'loc': meta(symbol).loc
+                },
+                'computed': false
+            },
+            'right': emitExpression(env, value),
+            'loc': loc
+        };
+    }
+}
+function emitSetIndex(env, loc, args, value) {
+    {
+        let obj = first(args), index = second(args);
+        return {
+            'type': 'AssignmentExpression',
+            'operator': '=',
+            'left': {
+                'type': 'MemberExpression',
+                'object': emitExpression(env, obj),
+                'property': emitExpression(env, index),
+                'computed': true
+            },
+            'right': emitExpression(env, value),
+            'loc': loc
+        };
+    }
+}
+function emitBinOp(op) {
+    return (env, loc, args) => {
+        if (isEmpty(args))
+            error('Empty operator expression');
+        else {
+        }
+        return emitExpressions(env, args).reduce((acc, arg) => {
+            return {
+                'type': 'BinaryExpression',
+                'operator': op,
+                'left': acc,
+                'right': arg,
+                'loc': loc
+            };
+        });
+    };
+}
+function emitSpread(env, loc, args) {
+    return {
+        'type': 'SpreadElement',
+        'argument': emitExpression(env, first(args)),
+        'loc': loc
+    };
+}
+function emitArray(env, loc, args) {
+    return {
+        'type': 'ArrayExpression',
+        'elements': emitExpressions(env, args),
+        'loc': loc
+    };
+}
+function emitFn(env, loc, args) {
+    {
+        let params = first(args), body = skip1(args), funcEnv = childEnv(env);
+        return {
+            'type': 'ArrowFunctionExpression',
+            'id': null,
+            'params': emitPatterns(funcEnv, params),
+            'body': emitReturnBlock(funcEnv, body),
+            'loc': loc
+        };
+    }
+}
+function emitIf(env, loc, args) {
+    {
+        let test = first(args), ifTrue = second(args), ifFalse = skip2(args);
+        return {
+            'type': 'IfStatement',
+            'test': emitExpression(env, test),
+            'consequent': emitStatement(env, ifTrue),
+            'alternate': (() => {
+                if (isNotNil(ifFalse))
+                    return emitBlock(env, ifFalse);
+                else {
+                    return;
+                }
+            })(),
+            'loc': loc
+        };
+    }
+}
+function emitBlock(env, forms) {
+    if (isSingle(forms))
+        return emitStatement(env, first(forms));
+    else
+        return {
+            'type': 'BlockStatement',
+            'body': emitStatements(env, forms)
+        };
+}
+function isSingle(list) {
+    return isList(list) && list.length === 1;
+}
+function emitStatements(env, forms) {
+    return mapNotNil(forms, form => {
+        return emitStatement(env, form);
+    });
+}
+function emitFor(env, loc, args) {
+    {
+        let var$ = first(first(args)), value = second(first(args)), body = skip1(args), forEnv = childEnv(env);
+        return {
+            'type': 'ForOfStatement',
+            'left': emitPattern(forEnv, var$),
+            'right': emitExpression(forEnv, value),
+            'body': emitBlock(forEnv, body),
+            'loc': loc
+        };
+    }
+}
+function emitDef(env, loc, args) {
+    return {
+        'type': 'VariableDeclaration',
+        'kind': 'let',
+        'declarations': [{
+                'type': 'VariableDeclarator',
+                'id': defineVariable(env, first(args)),
+                'init': emitExpression(env, second(args)),
+                'loc': loc
+            }],
+        'loc': loc
+    };
+}
+function emitLet(env, loc, args) {
+    {
+        let vars = first(args), body = skip1(args), letEnv = childEnv(env);
+        return {
+            'type': 'BlockStatement',
+            'body': [
+                emitVars(letEnv, vars),
+                ...emitStatements(letEnv, body)
+            ],
+            'loc': loc
+        };
+    }
+}
+function emitVars(env, vars) {
+    return {
+        'type': 'VariableDeclaration',
+        'kind': 'let',
+        'declarations': map(Array.from(grouped(vars, 2)), pair => {
+            return {
+                'type': 'VariableDeclarator',
+                'id': defineVariable(env, first(pair)),
+                'init': emitExpression(env, second(pair))
+            };
+        }),
+        'loc': meta(vars).loc
+    };
+}
+function* grouped(seq, count) {
+    {
+        let i = 0;
+        while (true) {
+            if (i < seq.length) {
+                yield seq.slice(i, i + count);
+                {
+                    i = i + count;
+                    continue;
+                }
+            } else {
+                return;
+            }
+        }
+    }
+}
+function emitCond(env, loc, args) {
+    {
+        let expr = first(args), rest = skip1(args), test = first(expr), body = skip1(expr);
+        if (test === stringToSymbol('else'))
+            return emitBlock(env, body);
+        else
+            return {
+                'type': 'IfStatement',
+                'test': emitExpression(env, test),
+                'consequent': emitBlock(env, body),
+                'alternate': (() => {
+                    if (isNotEmpty(rest))
+                        return emitCond(env, loc, rest);
+                    else {
+                        return;
+                    }
+                })()
+            };
+    }
+}
+function emitLoop(env, loc, args) {
+    {
+        let vars = first(args), body = skip1(args), loopEnv = recurEnv(env);
+        if (isEmpty(vars))
+            return {
+                'type': 'WhileStatement',
+                'test': emitLiteral(loopEnv, true),
+                'body': emitReturnBlock(loopEnv, body)
+            };
+        else
+            return {
+                'type': 'BlockStatement',
+                'body': [
+                    emitVars(loopEnv, vars),
+                    {
+                        'type': 'WhileStatement',
+                        'test': emitLiteral(loopEnv, true),
+                        'body': emitReturnBlock(loopEnv, body)
+                    }
+                ]
+            };
+    }
+}
+function recurEnv(env) {
+    return {
+        'variables': hashMapCopy(env.variables),
+        'loopVariables': [],
+        'functions': env.functions,
+        'functionNodes': env.functionNodes,
+        'isLoop': true
+    };
+}
+function emitDo(env, loc, args) {
+    return {
+        'type': 'BlockStatement',
+        'body': emitStatements(env, args),
+        'loc': loc
+    };
+}
+function emitYield(env, loc, args) {
+    return {
+        'type': 'YieldExpression',
+        'argument': emitExpression(env, first(args)),
+        'loc': loc
+    };
+}
+function emitRecur(env, loc, args) {
+    if (env.loopVariables.length !== args.length)
+        error('Recur with not enough args' + env.loopVariables.length + args.length);
+    else {
+    }
+    if (isEmpty(args))
+        return {
+            'type': 'ContinueStatement',
+            'loc': loc
+        };
+    else
+        return {
+            'type': 'BlockStatement',
+            'body': [
+                ...map(zip(env.loopVariables, args), pair => {
+                    return {
+                        'type': 'ExpressionStatement',
+                        'expression': {
+                            'type': 'AssignmentExpression',
+                            'operator': '=',
+                            'left': emitPattern(env, first(pair)),
+                            'right': emitExpression(env, second(pair))
+                        }
+                    };
+                }),
+                { 'type': 'ContinueStatement' }
+            ],
+            'loc': loc
+        };
+}
+function zip(...arrays) {
+    return map(first(arrays), (_, index) => {
+        return map(arrays, array => {
+            return array[index];
+        });
+    });
+}
+function emitDict(env, ctx, args) {
+    return {
+        'type': 'ObjectExpression',
+        'properties': map(Array.from(grouped(args, 2)), pair => {
+            return {
+                'type': 'Property',
+                'key': (() => {
+                    if (isKeyword(first(pair)))
+                        return emitLiteral(env, kebabcaseToCamelcase(keywordToString(first(pair))));
+                    else
+                        return emitLiteral(env, first(pair));
+                })(),
+                'value': emitExpression(env, second(pair))
+            };
+        })
+    };
+}
+function emitQuote(env, loc, args) {
+    return emit(env, knightQuote(first(args)));
+}
+function knightQuote(form) {
+    if (isSymbol(form))
+        return list(stringToSymbol('string->symbol'), symbolToString(form));
+    else if (isList(form))
+        return list(stringToSymbol('js/array'), ...map(form, knightQuote));
+    else
+        return form;
+}
+function emitReturn(env, loc, args) {
+    return {
+        'type': 'ReturnStatement',
+        'argument': (() => {
+            if (isNotEmpty(args))
+                return emitExpression(env, first(args));
+            else
+                return null;
+        })(),
+        'loc': loc
+    };
+}
+function emitThrow(env, loc, args) {
+    return {
+        'type': 'ThrowStatement',
+        'argument': emitExpression(env, first(args)),
+        'loc': loc
+    };
+}
+function emitNew(env, loc, args) {
+    return {
+        'type': 'NewExpression',
+        'callee': emitExpression(env, first(args)),
+        'arguments': emitExpressions(env, skip1(args)),
+        'loc': loc
+    };
+}
+function emitIndex(env, ctx, args) {
+    {
+        let obj = first(args), index = second(args);
+        return {
+            'type': 'MemberExpression',
+            'object': emitExpression(env, obj),
+            'property': emitExpression(env, index),
+            'computed': true
+        };
+    }
+}
+function stringToExprs(str) {
+    return readMany(makeStringReader(str));
+}
+function readMany(reader) {
+    {
+        let results = list();
+        while (true) {
+            skipWhitespace(reader);
+            if (hasMore(reader)) {
+                results = append(results, readSyntax(reader));
+                continue;
+            } else
+                return results;
+        }
+    }
+}
+function hasMore(reader) {
+    return reader.index < reader.input.length;
+}
+function makeStringReader(string) {
+    return {
+        'input': string,
+        'index': 0,
+        'line': 1,
+        'column': 0,
+        'indentWarnings': []
+    };
+}
+function emitModule(forms) {
+    {
+        let env = makeEnv(), nodes = emitStatements(env, forms), functionNodes = env.functionNodes;
+        return {
+            'type': 'Program',
+            'body': [
+                ...functionNodes.values(),
+                ...nodes
+            ]
+        };
+    }
+}
+function makeEnv() {
+    return {
+        'functions': hashMap(),
+        'functionNodes': hashMap(),
+        'variables': hashMap(),
+        'isLoop': false
+    };
+}
+function println(...args) {
+    return console.log(...map(args, string));
+}
+let internedSymbols = hashMap();
+let internedKeywords = hashMap();
+let symbolMeta = Symbol('meta');
+let readerMacros = hashMap();
+hashMapSet(readerMacros, '\'', readQuote);
+hashMapSet(readerMacros, '`', readSyntaxQuote);
+hashMapSet(readerMacros, '&', readSpread);
+hashMapSet(readerMacros, '~', readUnquote);
+hashMapSet(readerMacros, '\\', readCharacter);
+hashMapSet(readerMacros, '"', readString);
+hashMapSet(readerMacros, '(', readList);
+hashMapSet(readerMacros, ')', readUnmatchedDelimiter);
+hashMapSet(readerMacros, '[', readArray);
+hashMapSet(readerMacros, ']', readUnmatchedDelimiter);
+hashMapSet(readerMacros, '{', readStruct);
+hashMapSet(readerMacros, '}', readUnmatchedDelimiter);
+let jsKeywords = set('var', 'let', 'const');
+let emitSpecials = hashMap();
+hashMapSet(emitSpecials, stringToSymbol('defn'), emitDefn);
+hashMapSet(emitSpecials, stringToSymbol('defgen'), emitDefgen);
+hashMapSet(emitSpecials, stringToSymbol('set!'), emitSet);
+hashMapSet(emitSpecials, stringToSymbol('and'), emitBinOp('&&'));
+hashMapSet(emitSpecials, stringToSymbol('or'), emitBinOp('||'));
+hashMapSet(emitSpecials, stringToSymbol('js/and'), emitBinOp('&&'));
+hashMapSet(emitSpecials, stringToSymbol('js/or'), emitBinOp('||'));
+hashMapSet(emitSpecials, stringToSymbol('js/==='), emitBinOp('==='));
+hashMapSet(emitSpecials, stringToSymbol('js/!=='), emitBinOp('!=='));
+hashMapSet(emitSpecials, stringToSymbol('js/=='), emitBinOp('=='));
+hashMapSet(emitSpecials, stringToSymbol('js/!='), emitBinOp('!='));
+hashMapSet(emitSpecials, stringToSymbol('='), emitBinOp('==='));
+hashMapSet(emitSpecials, stringToSymbol('!='), emitBinOp('!=='));
+hashMapSet(emitSpecials, stringToSymbol('>='), emitBinOp('>='));
+hashMapSet(emitSpecials, stringToSymbol('<='), emitBinOp('<='));
+hashMapSet(emitSpecials, stringToSymbol('>'), emitBinOp('>'));
+hashMapSet(emitSpecials, stringToSymbol('<'), emitBinOp('<'));
+hashMapSet(emitSpecials, stringToSymbol('+'), emitBinOp('+'));
+hashMapSet(emitSpecials, stringToSymbol('-'), emitBinOp('-'));
+hashMapSet(emitSpecials, stringToSymbol('*'), emitBinOp('*'));
+hashMapSet(emitSpecials, stringToSymbol('/'), emitBinOp('/'));
+hashMapSet(emitSpecials, stringToSymbol('mod'), emitBinOp('%'));
+hashMapSet(emitSpecials, stringToSymbol('js/instanceof'), emitBinOp('instanceof'));
+hashMapSet(emitSpecials, stringToSymbol('spread'), emitSpread);
+hashMapSet(emitSpecials, stringToSymbol('js/array'), emitArray);
+hashMapSet(emitSpecials, stringToSymbol('fn'), emitFn);
+hashMapSet(emitSpecials, stringToSymbol('if'), emitIf);
+hashMapSet(emitSpecials, stringToSymbol('for'), emitFor);
+hashMapSet(emitSpecials, stringToSymbol('def'), emitDef);
+hashMapSet(emitSpecials, stringToSymbol('let'), emitLet);
+hashMapSet(emitSpecials, stringToSymbol('cond'), emitCond);
+hashMapSet(emitSpecials, stringToSymbol('loop'), emitLoop);
+hashMapSet(emitSpecials, stringToSymbol('do'), emitDo);
+hashMapSet(emitSpecials, stringToSymbol('yield'), emitYield);
+hashMapSet(emitSpecials, stringToSymbol('recur'), emitRecur);
+hashMapSet(emitSpecials, stringToSymbol('dict'), emitDict);
+hashMapSet(emitSpecials, stringToSymbol('quote'), emitQuote);
+hashMapSet(emitSpecials, stringToSymbol('js/return'), emitReturn);
+hashMapSet(emitSpecials, stringToSymbol('js/throw'), emitThrow);
+hashMapSet(emitSpecials, stringToSymbol('js/new'), emitNew);
+hashMapSet(emitSpecials, stringToSymbol('nth'), emitIndex);
+require('source-map-support/register');
+let fs = require('fs');
+let path = require('path');
+let escodegen = require('escodegen');
+let terser = require('terser');
+let program = require('commander').program;
+program.option('-o, --output <filename>', 'Output JS filename');
+program.option('-m, --map', 'Generate source maps');
+program.parse(process.argv);
+{
+    let outputFilename = program.output, outputDirname = (() => {
+            if (outputFilename)
+                return path.dirname(outputFilename);
+            else {
+                return;
+            }
+        })(), sourceMapFilename = (() => {
+            if (program.map)
+                if (outputFilename)
+                    return path.basename(outputFilename) + '.map';
+                else
+                    return 'inline';
+            else {
+                return;
+            }
+        })(), code = fs.readFileSync(0, 'utf-8'), forms = stringToExprs(code), ast = emitModule(forms), output = escodegen.generate(ast, {
+            'sourceMap': 'stdin',
+            'sourceMapWithCode': true,
+            'sourceContent': code
+        }), sourceMap = output.map.toString();
+    if (output.error)
+        console.error(output.error);
+    else if (outputFilename) {
+        fs.writeFileSync(outputFilename, output.code);
+        if (sourceMapFilename && sourceMapFilename !== 'inline')
+            fs.writeFileSync(path.join(outputDirname, sourceMapFilename), output.map.toString());
+        else {
+        }
+    } else
+        println(output.code);
+}
